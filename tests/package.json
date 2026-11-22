@@ -1,0 +1,22 @@
+{
+  "name": "conkora-integration-tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Integration tests against the running docker-compose stack (Postgres, Hasura, Hapi).",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
+    "jose": "^6.2.18",
+    "pg": "^8.23.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.1.1"
+  }
+}
