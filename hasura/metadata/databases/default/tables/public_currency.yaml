@@ -1,0 +1,19 @@
+table:
+  name: currency
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [code, name, symbol, global_rate, created_at]
+      filter: {}
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [code, name, symbol, global_rate]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [name, symbol, global_rate]

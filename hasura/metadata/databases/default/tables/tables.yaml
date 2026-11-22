@@ -1,1 +1,2 @@
 - "!include public_admin_user.yaml"
+- "!include public_currency.yaml"

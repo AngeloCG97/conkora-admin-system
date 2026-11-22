@@ -96,7 +96,8 @@ Both `npm run check` and `npm test` must pass before opening a PR.
 
 Hasura returns numerics as JSON numbers (`HASURA_GRAPHQL_STRINGIFY_NUMERIC_TYPES` is off).
 Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
-(`invalid-headers` = no JWT, `invalid-jwt` = expired/bad signature, `validation-failed` = field not in role schema,
+(CHECK constraint failures come back as `permission-error` with message "Check constraint violation...", not `constraint-violation`;
+`invalid-headers` = no JWT, `invalid-jwt` = expired/bad signature, `validation-failed` = field not in role schema,
 `constraint-violation` = FK/unique/check failed).
 
 ## Adding a SQL view (financial calculations, PRD "Módulo 1")
@@ -155,9 +156,12 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   ```
   Put GraphQL documents as `const` strings next to the page (or `src/graphql/<entity>.ts` when shared)
   with hand-written TypeScript result types. Show `<Loading />` while `isPending`.
-- Money: never format amounts inline. Issue #3 creates `src/lib/money.ts` (`formatMoney(amount, currency)`,
+- Money: never format amounts inline. `src/lib/money.ts` (created in #3; `formatMoney(amount, currency)`,
   e.g. `$1,250.00`, `₡505.000`) with unit tests; every screen uses it. Amounts in other currencies are
   converted by SQL views, never in the frontend.
+- Forms: a `Dialog` component per entity next to its page (see `monedas/page.tsx`): local `useState` fields,
+  `touched` flag for validation messages, `useMutation` + `qc.invalidateQueries`, `key` on the dialog to reset state.
+  Currency is keyed by `code` (text PK, not uuid); the table has no DELETE permission.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.
