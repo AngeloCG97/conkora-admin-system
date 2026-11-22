@@ -1,5 +1,63 @@
-import { ComingSoon } from '@/components/layout/ComingSoon';
+'use client';
+
+import AddIcon from '@mui/icons-material/Add';
+import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import CardContent from '@mui/material/CardContent';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
+import { useState } from 'react';
+import { Loading } from '@/components/feedback/Loading';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { formatDateRange } from '@/lib/dates';
+import { gqlRequest } from '@/lib/graphql';
+import { TRIP_FIELDS, TripDialog, type Trip } from './TripDialog';
+
+const TRIPS_QUERY = `query Trips {
+  trip(order_by: [{ start_date: desc }]) { ${TRIP_FIELDS} }
+}`;
 
 export default function TripsPage() {
-  return <ComingSoon title="Viajes" />;
+  const [creating, setCreating] = useState(false);
+  const { data, isPending } = useQuery({
+    queryKey: ['trips'],
+    queryFn: () => gqlRequest<{ trip: Trip[] }>(TRIPS_QUERY),
+  });
+
+  return (
+    <>
+      <PageHeader
+        title="Viajes"
+        actions={
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)}>
+            Nuevo Viaje
+          </Button>
+        }
+      />
+      {isPending ? (
+        <Loading />
+      ) : data?.trip.length === 0 ? (
+        <Typography color="text.secondary">Aún no hay Viajes. Crea el primero con «Nuevo Viaje».</Typography>
+      ) : (
+        <Stack spacing={1.5}>
+          {data?.trip.map((t) => (
+            <Card key={t.id} variant="outlined">
+              <CardActionArea component={Link} href={`/viajes/detalle/?id=${t.id}`}>
+                <CardContent>
+                  <Typography sx={{ fontWeight: 600 }}>{t.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {t.destination} · {formatDateRange(t.start_date, t.end_date)}
+                  </Typography>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          ))}
+        </Stack>
+      )}
+      {creating && <TripDialog onClose={() => setCreating(false)} />}
+    </>
+  );
 }

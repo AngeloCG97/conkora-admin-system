@@ -1,2 +1,4 @@
 - "!include public_admin_user.yaml"
 - "!include public_currency.yaml"
+- "!include public_trip.yaml"
+- "!include public_trip_rate.yaml"

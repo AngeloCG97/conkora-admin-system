@@ -111,3 +111,79 @@ describe('currency', () => {
     expect(usd.errors?.[0]?.message).toMatch(/currency_usd_rate_is_one/);
   });
 });
+
+describe('trip and trip_rate', () => {
+  const NAME = 'Viaje de prueba permisos';
+
+  afterAll(async () => {
+    await asAdmin(`mutation { delete_trip(where: { name: { _eq: "${NAME}" } }) { affected_rows } }`);
+  });
+
+  it('manager does full CRUD on trips and their rates', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_trip_one: { id: string } }>(
+      `mutation { insert_trip_one(object: { name: "${NAME}", destination: "Miami", start_date: "2026-01-10", end_date: "2026-01-15" }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const id = ins.data!.insert_trip_one.id;
+
+    const rate = await graphql(
+      `mutation { insert_trip_rate_one(object: { trip_id: "${id}", currency_code: "CRC", rate: 520 }) { rate } }`,
+      { auth },
+    );
+    expect(rate.errors).toBeUndefined();
+    const upd = await graphql(
+      `mutation { update_trip_rate_by_pk(pk_columns: { trip_id: "${id}", currency_code: "CRC" }, _set: { rate: 530.5 }) { rate } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_trip_rate_by_pk: { rate: 530.5 } });
+
+    const sel = await graphql<{ trip_by_pk: { rates: { currency_code: string }[] } }>(
+      `{ trip_by_pk(id: "${id}") { rates { currency_code rate } } }`,
+      { auth },
+    );
+    expect(sel.data!.trip_by_pk.rates).toEqual([{ currency_code: 'CRC', rate: 530.5 }]);
+
+    const updTrip = await graphql(
+      `mutation { update_trip_by_pk(pk_columns: { id: "${id}" }, _set: { destination: "Orlando" }) { destination } }`,
+      { auth },
+    );
+    expect(updTrip.data).toEqual({ update_trip_by_pk: { destination: 'Orlando' } });
+
+    const delRate = await graphql(
+      `mutation { delete_trip_rate_by_pk(trip_id: "${id}", currency_code: "CRC") { rate } }`,
+      { auth },
+    );
+    expect(delRate.errors).toBeUndefined();
+    const del = await graphql(`mutation { delete_trip_by_pk(id: "${id}") { id } }`, { auth });
+    expect(del.errors).toBeUndefined();
+  });
+
+  it('rejects an end date before the start date', async () => {
+    const r = await graphql(
+      `mutation { insert_trip_one(object: { name: "${NAME}", destination: "X", start_date: "2026-02-10", end_date: "2026-02-01" }) { id } }`,
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(r.errors?.[0]?.message).toMatch(/trip_dates_ordered/);
+  });
+
+  it('rejects non-positive rates, USD rates and unknown currencies', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_trip_one: { id: string } }>(
+      `mutation { insert_trip_one(object: { name: "${NAME}", destination: "X", start_date: "2026-02-01", end_date: "2026-02-01" }) { id } }`,
+      { auth },
+    );
+    const id = ins.data!.insert_trip_one.id;
+    const cases: [string, RegExp][] = [
+      ['currency_code: "CRC", rate: 0', /trip_rate/],
+      ['currency_code: "CRC", rate: -1', /trip_rate/],
+      ['currency_code: "USD", rate: 1', /trip_rate_not_usd/],
+      ['currency_code: "QQQ", rate: 1', /foreign key|trip_rate_currency_code_fkey/i],
+    ];
+    for (const [fields, pattern] of cases) {
+      const r = await graphql(`mutation { insert_trip_rate_one(object: { trip_id: "${id}", ${fields} }) { rate } }`, { auth });
+      expect(r.errors?.[0]?.message, fields).toMatch(pattern);
+    }
+  });
+});

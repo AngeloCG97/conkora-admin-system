@@ -1,0 +1,30 @@
+table:
+  name: trip_rate
+  schema: public
+object_relationships:
+  - name: trip
+    using:
+      foreign_key_constraint_on: trip_id
+  - name: currency
+    using:
+      foreign_key_constraint_on: currency_code
+select_permissions:
+  - role: manager
+    permission:
+      columns: [trip_id, currency_code, rate, created_at]
+      filter: {}
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [trip_id, currency_code, rate]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [rate]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}
