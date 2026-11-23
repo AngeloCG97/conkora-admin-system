@@ -565,3 +565,19 @@ describe('trip_summary and trip_expense_category_summary', () => {
     expect(mutations.filter((m) => /trip_summary|trip_expense_category_summary/.test(m))).toEqual([]);
   });
 });
+
+describe('no_trip_summary', () => {
+  it('manager reads the single summary row of what has no Viaje', async () => {
+    const read = await graphql(
+      `{ no_trip_summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd } }`,
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(read.errors).toBeUndefined();
+    expect(read.data?.no_trip_summary).toHaveLength(1);
+  });
+
+  it('is a read-only view', async () => {
+    const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
+    expect(mutations.filter((m) => /no_trip_summary/.test(m))).toEqual([]);
+  });
+});
