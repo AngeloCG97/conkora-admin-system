@@ -52,3 +52,33 @@ export async function insertCustomer(db: pg.PoolClient, { name = 'Cliente', phon
   );
   return customer.id;
 }
+
+/** Inserts a Pedido. `tripId` null/omitted = Personal. Add Artículos with `insertOrderItem`. */
+export async function insertOrder(
+  db: pg.PoolClient,
+  {
+    customerId,
+    tripId = null as string | null,
+    currency = 'USD',
+    status = 'pending',
+  }: { customerId: string; tripId?: string | null; currency?: string; status?: string },
+) {
+  const { rows: [order] } = await db.query<{ id: string }>(
+    `INSERT INTO "order" (customer_id, trip_id, currency_code, status, date)
+     VALUES ($1, $2, $3, $4, '2026-01-12') RETURNING id`,
+    [customerId, tripId, currency, status],
+  );
+  return order.id;
+}
+
+/** Inserts a Artículo of a Pedido (price in the Pedido's currency). */
+export async function insertOrderItem(
+  db: pg.PoolClient,
+  { orderId, price, quantity = 1, name = 'Artículo' }: { orderId: string; price: number; quantity?: number; name?: string },
+) {
+  const { rows: [item] } = await db.query<{ id: string }>(
+    'INSERT INTO order_item (order_id, name, price, quantity) VALUES ($1, $2, $3, $4) RETURNING id',
+    [orderId, name, price, quantity],
+  );
+  return item.id;
+}
