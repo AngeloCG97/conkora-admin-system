@@ -1,0 +1,44 @@
+# Render Blueprint for the Hapi API (ADR-0001). Setup steps: docs/despliegue.md, step 4.
+# Node 24 runs the TypeScript sources directly (type stripping), so there is no build step
+# besides installing production dependencies. Render injects PORT; config.ts reads it.
+services:
+  - type: web
+    name: conkora-api
+    runtime: node
+    plan: free
+    region: virginia
+    rootDir: backend
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/index.ts
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # Secrets and per-deployment values: Render asks for them when the Blueprint is created.
+      - key: JWT_SECRET
+        sync: false
+      - key: HASURA_ADMIN_SECRET
+        sync: false
+      - key: HASURA_GRAPHQL_URL
+        sync: false
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: JWT_EXPIRES_IN_SECONDS
+        sync: false
+      # Cloudinary (Fotos de Artículos, issue #13).
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false

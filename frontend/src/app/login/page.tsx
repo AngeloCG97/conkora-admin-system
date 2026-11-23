@@ -2,8 +2,10 @@
 
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import AlertTitle from '@mui/material/AlertTitle';
 import Button from '@mui/material/Button';
 import CircularProgress from '@mui/material/CircularProgress';
+import LinearProgress from '@mui/material/LinearProgress';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
@@ -12,9 +14,14 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { Logo } from '@/components/layout/Logo';
 import { LoginError, login } from '@/lib/auth';
+import { config } from '@/lib/config';
 import { getSession } from '@/lib/session';
+import { wakeServer } from '@/lib/wake';
 
-/** After this long, tell the user the free-tier server is probably waking up. */
+/**
+ * After this long (or as soon as a request has to be retried), tell the user the free-tier
+ * server is waking up (Render sleeps when idle; the first login can take 30–60 s).
+ */
 const SLOW_LOGIN_MS = 4000;
 
 export default function LoginPage() {
@@ -27,6 +34,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (getSession()) router.replace('/');
+    else wakeServer(config.apiUrl);
   }, [router]);
 
   const onSubmit = async (event: FormEvent) => {
@@ -35,7 +43,7 @@ export default function LoginPage() {
     setSubmitting(true);
     const slowTimer = setTimeout(() => setSlow(true), SLOW_LOGIN_MS);
     try {
-      await login(username.trim(), password);
+      await login(username.trim(), password, { onWaking: () => setSlow(true) });
       router.replace('/');
     } catch (err) {
       setError(err instanceof LoginError ? err.message : 'Ocurrió un error inesperado.');
@@ -58,6 +66,14 @@ export default function LoginPage() {
               Iniciar sesión
             </Typography>
             {error && <Alert severity="error">{error}</Alert>}
+            {slow && (
+              <Alert severity="info" icon={false} role="status">
+                <AlertTitle>Despertando el servidor…</AlertTitle>
+                El servidor gratuito se duerme cuando nadie lo usa. El primer ingreso puede tardar
+                hasta un minuto; no cierres esta página.
+                <LinearProgress sx={{ mt: 1.5 }} />
+              </Alert>
+            )}
             <TextField
               label="Usuario"
               name="username"
@@ -84,13 +100,8 @@ export default function LoginPage() {
               disabled={submitting || !username.trim() || !password}
               startIcon={submitting ? <CircularProgress size={18} color="inherit" /> : undefined}
             >
-              {submitting ? 'Entrando…' : 'Entrar'}
+              {slow ? 'Despertando el servidor…' : submitting ? 'Entrando…' : 'Entrar'}
             </Button>
-            {slow && (
-              <Typography variant="body2" color="text.secondary" align="center" role="status">
-                El servidor se está despertando, esto puede tardar hasta un minuto…
-              </Typography>
-            )}
           </Stack>
         </Box>
       </Paper>

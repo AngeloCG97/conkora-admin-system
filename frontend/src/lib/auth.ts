@@ -1,19 +1,32 @@
 import { config } from './config';
 import { clearSession, saveSession, type Session } from './session';
+import { fetchWhileWaking } from './wake';
 
 export class LoginError extends Error {}
 
-/** Calls Hapi's POST /auth/login and stores the session on success. */
-export async function login(username: string, password: string): Promise<Session> {
+/**
+ * Calls Hapi's POST /auth/login and stores the session on success. While the API is waking up
+ * from a cold start it keeps retrying (see `fetchWhileWaking`) and calls `onWaking` on each retry.
+ */
+export async function login(
+  username: string,
+  password: string,
+  { onWaking }: { onWaking?: () => void } = {},
+): Promise<Session> {
   let response: Response;
   try {
-    response = await fetch(`${config.apiUrl}/auth/login`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
+    response = await fetchWhileWaking(
+      (signal) =>
+        fetch(`${config.apiUrl}/auth/login`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+          signal,
+        }),
+      { onRetry: onWaking },
+    );
   } catch {
-    throw new LoginError('No se pudo conectar con el servidor. Intenta de nuevo.');
+    throw new LoginError('El servidor no respondió. Espera un momento e intenta de nuevo.');
   }
 
   const body = await response.json().catch(() => ({}));
