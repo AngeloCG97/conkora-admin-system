@@ -162,6 +162,10 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Forms: a `Dialog` component per entity next to its page (see `monedas/page.tsx`): local `useState` fields,
   `touched` flag for validation messages, `useMutation` + `qc.invalidateQueries`, `key` on the dialog to reset state.
   Currency is keyed by `code` (text PK, not uuid); the table has no DELETE permission.
+- Parent/child + detail: list page (`viajes/page.tsx`) links to `viajes/detalle/?id=` (cards via `CardActionArea component={Link}`);
+  the detail page owns edit (`viajes/TripDialog.tsx`, shared create/edit dialog), delete (`useConfirm`, `constraint-violation`
+  message) and the child rows (`trip_rate`, composite PK, upsert with `on_conflict: { constraint: trip_rate_pkey, ... }`).
+  Dates: `src/lib/dates.ts` (`formatDate`, `formatDateRange`), never `new Date(iso)`.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.
