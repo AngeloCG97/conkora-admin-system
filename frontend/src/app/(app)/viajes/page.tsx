@@ -15,10 +15,18 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDateRange } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { TRIP_FIELDS, TripDialog, type Trip } from './TripDialog';
+import { money, profitColor, type TripSummary } from './TripReport';
 
 const TRIPS_QUERY = `query Trips {
   trip(order_by: [{ start_date: desc }]) { ${TRIP_FIELDS} }
 }`;
+
+// Separate query under ['orders', ...] so Pedido/Abono/Gasto changes refresh the figures.
+const SUMMARIES_QUERY = `query TripSummaries {
+  trip { id summary { income_usd expenses_usd profit_usd } }
+}`;
+
+type ListSummary = Pick<TripSummary, 'income_usd' | 'expenses_usd' | 'profit_usd'>;
 
 export default function TripsPage() {
   const [creating, setCreating] = useState(false);
@@ -26,6 +34,12 @@ export default function TripsPage() {
     queryKey: ['trips'],
     queryFn: () => gqlRequest<{ trip: Trip[] }>(TRIPS_QUERY),
   });
+
+  const summaries = useQuery({
+    queryKey: ['orders', 'trip-summaries'],
+    queryFn: () => gqlRequest<{ trip: { id: string; summary: ListSummary | null }[] }>(SUMMARIES_QUERY),
+  });
+  const summaryById = new Map(summaries.data?.trip.map((t) => [t.id, t.summary]));
 
   return (
     <>
@@ -51,6 +65,15 @@ export default function TripsPage() {
                   <Typography variant="body2" color="text.secondary">
                     {t.destination} · {formatDateRange(t.start_date, t.end_date)}
                   </Typography>
+                  {summaryById.get(t.id) && (
+                    <Stack direction="row" useFlexGap spacing={2} sx={{ flexWrap: 'wrap', mt: 0.5 }}>
+                      <Typography variant="body2">Ingreso {money(summaryById.get(t.id)!.income_usd)}</Typography>
+                      <Typography variant="body2">Gastos {money(summaryById.get(t.id)!.expenses_usd)}</Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: profitColor(summaryById.get(t.id)!.profit_usd) }}>
+                        Utilidad {money(summaryById.get(t.id)!.profit_usd)}
+                      </Typography>
+                    </Stack>
+                  )}
                 </CardContent>
               </CardActionArea>
             </Card>

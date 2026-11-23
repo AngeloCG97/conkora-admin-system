@@ -25,6 +25,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDateRange } from '@/lib/dates';
 import { GraphQLRequestError, gqlRequest } from '@/lib/graphql';
 import { TRIP_FIELDS, TripDialog, type Trip } from '../TripDialog';
+import { TripReport } from '../TripReport';
 
 interface Currency {
   code: string;
@@ -90,6 +91,7 @@ function RateDialog({
   const done = (message: string) => {
     notify.success(message);
     qc.invalidateQueries({ queryKey: ['trip', tripId] });
+    qc.invalidateQueries({ queryKey: ['orders'] }); // the Viaje report depends on its rates
     onClose();
   };
 
@@ -227,6 +229,8 @@ function TripDetail({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+
+      <TripReport tripId={trip.id} />
 
       <Typography variant="h6" component="h2" sx={{ mb: 0.5 }}>
         Tipos de cambio

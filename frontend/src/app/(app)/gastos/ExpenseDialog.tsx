@@ -81,6 +81,7 @@ export function ExpenseDialog({
   const done = (message: string) => {
     notify.success(message);
     qc.invalidateQueries({ queryKey: ['expenses'] });
+    qc.invalidateQueries({ queryKey: ['orders'] }); // Viaje report lives under ['orders', ...]
     onClose();
   };
 

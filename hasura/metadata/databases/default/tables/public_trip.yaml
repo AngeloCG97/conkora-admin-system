@@ -23,6 +23,19 @@ array_relationships:
         remote_table: { name: customer_trip_summary, schema: public }
         column_mapping: { id: trip_id }
         insertion_order: null
+  - name: expense_categories
+    using:
+      manual_configuration:
+        remote_table: { name: trip_expense_category_summary, schema: public }
+        column_mapping: { id: trip_id }
+        insertion_order: null
+object_relationships:
+  - name: summary
+    using:
+      manual_configuration:
+        remote_table: { name: trip_summary, schema: public }
+        column_mapping: { id: trip_id }
+        insertion_order: null
 select_permissions:
   - role: manager
     permission:
