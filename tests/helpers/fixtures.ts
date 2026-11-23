@@ -2,7 +2,7 @@ import type pg from 'pg';
 
 /**
  * Fixture builders for SQL tests (use inside `withRollback`). Each returns the new row's id.
- * Later slices add builders here (customer, order, order_item, payment) so view tests stay short.
+ * Later slices add builders here so view tests stay short.
  */
 
 /** Inserts a Viaje, optionally with its own exchange rates (`{ CRC: 510 }`, units per 1 USD). */
@@ -81,4 +81,16 @@ export async function insertOrderItem(
     [orderId, name, price, quantity],
   );
   return item.id;
+}
+
+/** Inserts an Abono of a Pedido, in its own currency (converted to the Pedido's currency by `order_summary`). */
+export async function insertPayment(
+  db: pg.PoolClient,
+  { orderId, amount, currency = 'USD' }: { orderId: string; amount: number; currency?: string },
+) {
+  const { rows: [payment] } = await db.query<{ id: string }>(
+    `INSERT INTO payment (order_id, amount, currency_code, date) VALUES ($1, $2, $3, '2026-01-13') RETURNING id`,
+    [orderId, amount, currency],
+  );
+  return payment.id;
 }

@@ -1,4 +1,4 @@
-# View (read-only): effective exchange rate and Total (own currency and USD) of each Pedido, cancelled included.
+# View (read-only): effective exchange rate, Total, Abono and Saldo (own currency and USD) of each Pedido, cancelled included.
 table:
   name: order_summary
   schema: public
@@ -12,6 +12,6 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd]
+      columns: [order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd, paid, balance, paid_usd, balance_usd, is_paid]
       filter: {}
       allow_aggregations: true

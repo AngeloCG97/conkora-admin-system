@@ -1,0 +1,31 @@
+table:
+  name: payment
+  schema: public
+object_relationships:
+  - name: order
+    using:
+      foreign_key_constraint_on: order_id
+  - name: currency
+    using:
+      foreign_key_constraint_on: currency_code
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, order_id, amount, currency_code, date, notes, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [order_id, amount, currency_code, date, notes]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [amount, currency_code, date, notes]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}
