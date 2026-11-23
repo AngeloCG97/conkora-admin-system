@@ -19,6 +19,7 @@ import { gqlRequest } from '@/lib/graphql';
 import { formatMoney } from '@/lib/money';
 import { EXPENSE_FIELDS, ExpenseDialog, type Expense, type ExpenseOptions } from './ExpenseDialog';
 import { expenseWhere, type ExpenseFilters, type TripFilter } from './expenses';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 type ExpenseRow = Expense & {
   currency: { code: string; symbol: string };
@@ -51,13 +52,19 @@ const EXPENSES_QUERY = `query Expenses($where: expense_bool_exp!, $summaryWhere:
 
 /** Select value <-> TripFilter. */
 const ALL = '__all';
-const PERSONAL = '__personal';
-const tripFilterValue = (f: TripFilter) => (f.kind === 'all' ? ALL : f.kind === 'personal' ? PERSONAL : f.id);
+const GENERAL = '__general';
+const tripFilterValue = (f: TripFilter) => (f.kind === 'all' ? ALL : f.kind === 'general' ? GENERAL : f.id);
 const toTripFilter = (value: string): TripFilter =>
-  value === ALL ? { kind: 'all' } : value === PERSONAL ? { kind: 'personal' } : { kind: 'trip', id: value };
+  value === ALL ? { kind: 'all' } : value === GENERAL ? { kind: 'general' } : { kind: 'trip', id: value };
+
+/** Select value <-> Gasto personal filter (null = both). */
+const PERSONAL = '__personal';
+const BUSINESS = '__business';
+const personalFilterValue = (p: boolean | null) => (p === null ? ALL : p ? PERSONAL : BUSINESS);
+const toPersonalFilter = (value: string) => (value === ALL ? null : value === PERSONAL);
 
 export default function ExpensesPage() {
-  const [filters, setFilters] = useState<ExpenseFilters>({ trip: { kind: 'all' }, category: null });
+  const [filters, setFilters] = useState<ExpenseFilters>({ trip: { kind: 'all' }, category: null, personal: null });
   const [editing, setEditing] = useState<Expense | 'new' | null>(null);
 
   const options = useQuery({
@@ -102,7 +109,7 @@ export default function ExpensesPage() {
           sx={{ minWidth: 220 }}
         >
           <MenuItem value={ALL}>Todos</MenuItem>
-          <MenuItem value={PERSONAL}>Sin Viaje (Personal)</MenuItem>
+          <MenuItem value={GENERAL}>{NO_TRIP_LABEL} (sin Viaje)</MenuItem>
           {options.data?.trip.map((t) => (
             <MenuItem key={t.id} value={t.id}>
               {t.name}
@@ -123,6 +130,18 @@ export default function ExpensesPage() {
               {c.comment}
             </MenuItem>
           ))}
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label="Tipo"
+          value={personalFilterValue(filters.personal)}
+          onChange={(e) => setFilters((f) => ({ ...f, personal: toPersonalFilter(e.target.value) }))}
+          sx={{ minWidth: 180 }}
+        >
+          <MenuItem value={ALL}>Todos</MenuItem>
+          <MenuItem value={BUSINESS}>Del negocio</MenuItem>
+          <MenuItem value={PERSONAL}>Personales</MenuItem>
         </TextField>
       </Stack>
 
@@ -146,13 +165,12 @@ export default function ExpensesPage() {
                     <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
                       <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{e.description}</Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {formatDate(e.date)} · {e.trip?.name ?? 'Personal'}
+                        {formatDate(e.date)} · {e.trip?.name ?? NO_TRIP_LABEL}
                       </Typography>
-                      <Chip
-                        size="small"
-                        label={categoryLabel.get(e.category) ?? e.category}
-                        sx={{ alignSelf: 'flex-start' }}
-                      />
+                      <Stack direction="row" useFlexGap spacing={0.5} sx={{ flexWrap: 'wrap' }}>
+                        <Chip size="small" label={categoryLabel.get(e.category) ?? e.category} />
+                        {e.is_personal && <Chip size="small" color="secondary" variant="outlined" label="Gasto personal" />}
+                      </Stack>
                     </Stack>
                     <Stack spacing={0.5} sx={{ textAlign: 'right', flexShrink: 0 }}>
                       <Typography sx={{ fontWeight: 600 }}>{formatMoney(e.amount, e.currency)}</Typography>

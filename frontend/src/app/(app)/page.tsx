@@ -29,9 +29,10 @@ interface DashboardData {
   customer_summary_aggregate: { aggregate: { sum: { balance_usd: number | null } | null } };
   trip: RecentTrip[];
   no_trip_summary: Pick<TripSummary, 'order_count' | 'income_usd' | 'expenses_usd' | 'pending_usd'>[];
+  business_summary: Pick<TripSummary, 'order_count' | 'income_usd' | 'expenses_usd' | 'personal_expenses_usd' | 'profit_usd'>[];
 }
 
-// Everything (Saldo, recent Viajes, no-Viaje summary) comes from SQL views; the frontend only displays.
+// Everything (Utilidad global, Saldo, recent Viajes, General summary) comes from SQL views; the frontend only displays.
 const DASHBOARD_QUERY = `query Dashboard {
   customer_summary_aggregate { aggregate { sum { balance_usd } } }
   trip(order_by: [{ start_date: desc }], limit: ${RECENT_TRIPS}) {
@@ -39,6 +40,7 @@ const DASHBOARD_QUERY = `query Dashboard {
     summary { income_usd expenses_usd profit_usd }
   }
   no_trip_summary { order_count income_usd expenses_usd pending_usd }
+  business_summary { order_count income_usd expenses_usd personal_expenses_usd profit_usd }
 }`;
 
 interface ProfitData {
@@ -87,10 +89,27 @@ export default function HomePage() {
   const saldo = data?.customer_summary_aggregate.aggregate.sum?.balance_usd ?? 0;
   const recentProfit = ids.length === 0 ? 0 : (profit.data?.trip_summary_aggregate.aggregate.sum?.profit_usd ?? 0);
   const noTrip = data?.no_trip_summary[0];
+  const business = data?.business_summary[0];
 
   return (
     <>
       <PageHeader title="Inicio" />
+      {business && (
+        <>
+          <Typography variant="h6" component="h2" sx={{ mb: 0.5 }}>
+            Utilidad global
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            Todos los Viajes más lo {NO_TRIP_LABEL}, en USD (Gastos personales incluidos).
+          </Typography>
+          <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
+            <Figure label={`Ingreso (${business.order_count} Pedidos)`} value={business.income_usd} />
+            <Figure label="Gastos" value={business.expenses_usd} />
+            <Figure label="Gastos personales" value={business.personal_expenses_usd} />
+            <Figure label="Utilidad" value={business.profit_usd} color={profitColor(business.profit_usd)} />
+          </Stack>
+        </>
+      )}
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
         <Figure label="Saldo total por cobrar" value={saldo} />
         <Figure label={`Utilidad de los últimos ${RECENT_TRIPS} Viajes`} value={recentProfit} color={profitColor(recentProfit)} />

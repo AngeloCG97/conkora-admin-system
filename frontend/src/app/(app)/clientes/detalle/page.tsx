@@ -22,6 +22,7 @@ import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from '../../pedidos/OrderC
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../../pedidos/OrderDialog';
 import { AccountFigures, type AccountSummary } from '../AccountFigures';
 import { CUSTOMER_FIELDS, CustomerDialog, type Customer } from '../CustomerDialog';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 const CUSTOMER_QUERY = `query Customer($id: uuid!) {
   customer_by_pk(id: $id) { ${CUSTOMER_FIELDS} }
@@ -163,9 +164,9 @@ function CustomerDetail({ id }: { id: string }) {
       {(account.data?.customer_by_pk?.trip_summaries.length ?? 0) > 0 && (
         <Stack spacing={1} sx={{ mt: 1.5 }}>
           {account.data?.customer_by_pk?.trip_summaries.map((g) => (
-            <Card key={g.trip_id ?? 'personal'} variant="outlined">
+            <Card key={g.trip_id ?? 'general'} variant="outlined">
               <CardContent>
-                <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{g.trip?.name ?? 'Personal'}</Typography>
+                <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{g.trip?.name ?? NO_TRIP_LABEL}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                   {g.order_count} {g.order_count === 1 ? 'Pedido' : 'Pedidos'}
                 </Typography>

@@ -12,7 +12,7 @@ export interface OrderFilters {
 /** Hasura `where` for the Pedidos list filters. */
 export function orderWhere({ trip, customerId, status }: OrderFilters): Record<string, unknown> {
   const where: Record<string, unknown> = {};
-  if (trip.kind === 'personal') where.trip_id = { _is_null: true };
+  if (trip.kind === 'general') where.trip_id = { _is_null: true };
   if (trip.kind === 'trip') where.trip_id = { _eq: trip.id };
   if (customerId) where.customer_id = { _eq: customerId };
   if (status) where.status = { _eq: status };

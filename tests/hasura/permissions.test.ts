@@ -212,13 +212,38 @@ describe('expense, expense_category and expense_summary', () => {
     expect(upd.data).toEqual({ update_expense_by_pk: { amount: 99, category: 'food' } });
 
     const sel = await graphql<{ expense_summary: { amount_usd: number }[] }>(
-      `{ expense_summary(where: { expense_id: { _eq: "${id}" } }) { amount_usd rate expense { description } } }`,
+      `{ expense_summary(where: { expense_id: { _eq: "${id}" } }) { amount_usd rate is_personal expense { description } } }`,
       { auth },
     );
-    expect(sel.data!.expense_summary).toEqual([{ amount_usd: 99, rate: 1, expense: { description: DESCRIPTION } }]);
+    expect(sel.data!.expense_summary).toEqual([
+      { amount_usd: 99, rate: 1, is_personal: false, expense: { description: DESCRIPTION } },
+    ]);
 
     const del = await graphql(`mutation { delete_expense_by_pk(id: "${id}") { id } }`, { auth });
     expect(del.errors).toBeUndefined();
+  });
+
+  it('manager marks a Gasto as personal on insert and update (fuel category available)', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_expense_one: { id: string; is_personal: boolean } }>(
+      `mutation { insert_expense_one(object: { category: fuel, description: "${DESCRIPTION}", amount: 30, currency_code: "USD", date: "2026-01-11", is_personal: true }) { id is_personal category } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    expect(ins.data!.insert_expense_one).toMatchObject({ is_personal: true, category: 'fuel' });
+    const { id } = ins.data!.insert_expense_one;
+
+    const upd = await graphql(
+      `mutation { update_expense_by_pk(pk_columns: { id: "${id}" }, _set: { is_personal: false }) { is_personal } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_expense_by_pk: { is_personal: false } });
+
+    const filtered = await graphql<{ expense: { id: string }[] }>(
+      `{ expense(where: { description: { _eq: "${DESCRIPTION}" }, is_personal: { _eq: true } }) { id } }`,
+      { auth },
+    );
+    expect(filtered.data!.expense).toEqual([]);
   });
 
   it('manager reads the categories and cannot write them or the view', async () => {
@@ -226,7 +251,7 @@ describe('expense, expense_category and expense_summary', () => {
     const cats = await graphql<{ expense_category: { value: string }[] }>('{ expense_category { value comment } }', {
       auth: { token },
     });
-    expect(cats.data!.expense_category.map((c) => c.value)).toContain('merchandise');
+    expect(cats.data!.expense_category.map((c) => c.value)).toEqual(expect.arrayContaining(['merchandise', 'fuel']));
     const mutations = await rootFieldNames(token, 'mutationType');
     expect(mutations.filter((m) => /expense_category|expense_summary/.test(m))).toEqual([]);
   });
@@ -546,7 +571,7 @@ describe('trip_summary and trip_expense_category_summary', () => {
     expect(ins.errors).toBeUndefined();
     const read = await graphql(
       `{ trip(where: { name: { _eq: "${NAME}" } }) {
-        summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd }
+        summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd personal_expenses_usd business_expenses_usd }
         expense_categories { category total_usd }
       } }`,
       { auth },
@@ -554,7 +579,10 @@ describe('trip_summary and trip_expense_category_summary', () => {
     expect(read.errors).toBeUndefined();
     expect(read.data).toEqual({
       trip: [{
-        summary: { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0 },
+        summary: {
+          order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0,
+          personal_expenses_usd: 0, business_expenses_usd: 0,
+        },
         expense_categories: [],
       }],
     });
@@ -567,9 +595,9 @@ describe('trip_summary and trip_expense_category_summary', () => {
 });
 
 describe('no_trip_summary', () => {
-  it('manager reads the single summary row of what has no Viaje', async () => {
+  it('manager reads the single summary row of General (no Viaje)', async () => {
     const read = await graphql(
-      `{ no_trip_summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd } }`,
+      `{ no_trip_summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd personal_expenses_usd business_expenses_usd } }`,
       { auth: { token: await signTestJwt() } },
     );
     expect(read.errors).toBeUndefined();
@@ -579,5 +607,21 @@ describe('no_trip_summary', () => {
   it('is a read-only view', async () => {
     const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
     expect(mutations.filter((m) => /no_trip_summary/.test(m))).toEqual([]);
+  });
+});
+
+describe('business_summary', () => {
+  it('manager reads the single Utilidad global row', async () => {
+    const read = await graphql<{ business_summary: unknown[] }>(
+      `{ business_summary { order_count income_usd collected_usd pending_usd expenses_usd personal_expenses_usd business_expenses_usd profit_usd } }`,
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(read.errors).toBeUndefined();
+    expect(read.data?.business_summary).toHaveLength(1);
+  });
+
+  it('is a read-only view', async () => {
+    const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
+    expect(mutations.filter((m) => /business_summary/.test(m))).toEqual([]);
   });
 });

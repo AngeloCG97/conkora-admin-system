@@ -1,5 +1,5 @@
 /**
- * Label for Pedidos/Gastos without a Viaje. Pending decision (issue #11: "Personal" vs "General" / "Sin viaje"):
- * keep it in one place so renaming is a one-line change.
+ * Label for Pedidos/Gastos without a Viaje ("General", see CONTEXT.md and issue #11).
+ * Keep it in one place; never say "Personal" for this (a Gasto personal is something else).
  */
-export const NO_TRIP_LABEL = 'Personal';
+export const NO_TRIP_LABEL = 'General';

@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { useNotify } from '@/components/feedback/FeedbackProvider';
 import { todayIso } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 export interface Order {
   id: string;
@@ -149,10 +150,10 @@ export function OrderDialog({
             label="Viaje"
             value={tripId}
             onChange={(e) => setTripId(e.target.value)}
-            helperText="Sin Viaje = Personal (usa el tipo de cambio global)"
+            helperText={`Sin Viaje = ${NO_TRIP_LABEL} (usa el tipo de cambio global)`}
             slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
           >
-            <MenuItem value={NO_TRIP}>Sin Viaje (Personal)</MenuItem>
+            <MenuItem value={NO_TRIP}>{NO_TRIP_LABEL} (sin Viaje)</MenuItem>
             {options.trip.map((t) => (
               <MenuItem key={t.id} value={t.id}>
                 {t.name}

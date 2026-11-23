@@ -26,14 +26,14 @@ describe('customer_summary and customer_trip_summary', () => {
     const b = await insertOrder(db, { customerId, tripId, currency: 'CRC' });
     await insertOrderItem(db, { orderId: b, price: 20000, quantity: 2 });
     await insertPayment(db, { orderId: b, amount: 20000, currency: 'CRC' });
-    // Personal, CRC con tipo global (500): 5000 = $10
+    // General, CRC con tipo global (500): 5000 = $10
     const c = await insertOrder(db, { customerId, currency: 'CRC' });
     await insertOrderItem(db, { orderId: c, price: 5000 });
     // Cancelado (Viaje) con Artículos y Abono: no cuenta
     const x = await insertOrder(db, { customerId, tripId, status: 'cancelled' });
     await insertOrderItem(db, { orderId: x, price: 999 });
     await insertPayment(db, { orderId: x, amount: 500 });
-    // Cancelado Personal: no cuenta
+    // Cancelado General: no cuenta
     const y = await insertOrder(db, { customerId, status: 'cancelled' });
     await insertOrderItem(db, { orderId: y, price: 777 });
 

@@ -22,6 +22,9 @@ export interface TripSummary {
   pending_usd: number;
   expenses_usd: number;
   profit_usd: number;
+  /** Subtotals of `expenses_usd`: Gastos personales and Gastos del negocio. */
+  personal_expenses_usd: number;
+  business_expenses_usd: number;
 }
 
 interface TripReportData {
@@ -42,7 +45,9 @@ interface TripReportData {
 
 const REPORT_QUERY = `query TripReport($id: uuid!) {
   trip_by_pk(id: $id) {
-    summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd }
+    summary {
+      order_count income_usd collected_usd pending_usd expenses_usd profit_usd personal_expenses_usd business_expenses_usd
+    }
     expense_categories(order_by: [{ total_usd: desc }]) { category expense_count total_usd }
     customer_summaries(order_by: [{ total_usd: desc }]) {
       customer_id order_count total_usd paid_usd balance_usd customer { name }
@@ -90,6 +95,10 @@ export function TripReport({ tripId }: { tripId: string }) {
         <Figure label={`Ingreso (${s.order_count} Pedidos)`} value={s.income_usd} />
         <Figure label="Gastos" value={s.expenses_usd} />
         <Figure label="Utilidad" value={s.profit_usd} color={profitColor(s.profit_usd)} />
+      </Stack>
+      <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
+        <Figure label="Gastos del negocio" value={s.business_expenses_usd} />
+        <Figure label="Gastos personales" value={s.personal_expenses_usd} />
       </Stack>
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
         <Figure label="Cobrado" value={s.collected_usd} />

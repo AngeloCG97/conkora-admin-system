@@ -15,6 +15,7 @@ import type { TripFilter } from '../gastos/expenses';
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from './OrderDialog';
 import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from './OrderCard';
 import { orderWhere, type OrderFilters } from './orders';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 const ORDERS_QUERY = `query Orders($where: order_bool_exp!) {
   order(where: $where, order_by: [{ date: desc }, { created_at: desc }]) { ${ORDER_ROW_FIELDS} }
@@ -22,10 +23,10 @@ const ORDERS_QUERY = `query Orders($where: order_bool_exp!) {
 
 /** Select value <-> TripFilter. */
 const ALL = '__all';
-const PERSONAL = '__personal';
-const tripFilterValue = (f: TripFilter) => (f.kind === 'all' ? ALL : f.kind === 'personal' ? PERSONAL : f.id);
+const GENERAL = '__general';
+const tripFilterValue = (f: TripFilter) => (f.kind === 'all' ? ALL : f.kind === 'general' ? GENERAL : f.id);
 const toTripFilter = (value: string): TripFilter =>
-  value === ALL ? { kind: 'all' } : value === PERSONAL ? { kind: 'personal' } : { kind: 'trip', id: value };
+  value === ALL ? { kind: 'all' } : value === GENERAL ? { kind: 'general' } : { kind: 'trip', id: value };
 
 export default function OrdersPage() {
   const [filters, setFilters] = useState<OrderFilters>({ trip: { kind: 'all' }, customerId: null, status: null });
@@ -66,7 +67,7 @@ export default function OrdersPage() {
           sx={{ minWidth: 200 }}
         >
           <MenuItem value={ALL}>Todos</MenuItem>
-          <MenuItem value={PERSONAL}>Sin Viaje (Personal)</MenuItem>
+          <MenuItem value={GENERAL}>{NO_TRIP_LABEL} (sin Viaje)</MenuItem>
           {options.data?.trip.map((t) => (
             <MenuItem key={t.id} value={t.id}>
               {t.name}

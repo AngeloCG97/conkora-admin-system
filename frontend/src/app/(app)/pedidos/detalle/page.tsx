@@ -28,6 +28,7 @@ import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../OrderDia
 import { ORDER_ROW_FIELDS, PaymentChip, type OrderRow } from '../OrderCard';
 import { ORDER_ITEM_FIELDS, OrderItemDialog, type OrderItem } from '../OrderItemDialog';
 import { PAYMENT_FIELDS, PaymentDialog, type Payment } from '../PaymentDialog';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 type OrderDetail = OrderRow & { items: OrderItem[]; payments: Payment[] };
 
@@ -175,7 +176,7 @@ function OrderDetailView({ id }: { id: string }) {
             {order.trip ? (
               <Link href={`/viajes/detalle/?id=${order.trip_id}`}>{order.trip.name}</Link>
             ) : (
-              'Personal'
+              NO_TRIP_LABEL
             )}
           </Typography>
           <Typography variant="body2" color="text.secondary">Fecha · Moneda</Typography>
