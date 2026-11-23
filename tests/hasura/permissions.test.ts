@@ -187,3 +187,68 @@ describe('trip and trip_rate', () => {
     }
   });
 });
+
+describe('expense, expense_category and expense_summary', () => {
+  const DESCRIPTION = 'Gasto de prueba permisos';
+
+  afterAll(async () => {
+    await asAdmin(`mutation { delete_expense(where: { description: { _eq: "${DESCRIPTION}" } }) { affected_rows } }`);
+  });
+
+  it('manager does full CRUD on Gastos and reads their USD equivalent', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_expense_one: { id: string; summary: { amount_usd: number } } }>(
+      `mutation { insert_expense_one(object: { category: merchandise, description: "${DESCRIPTION}", amount: 120.5, currency_code: "USD", date: "2026-01-11" }) { id summary { amount_usd } } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const { id, summary } = ins.data!.insert_expense_one;
+    expect(summary.amount_usd).toBe(120.5);
+
+    const upd = await graphql(
+      `mutation { update_expense_by_pk(pk_columns: { id: "${id}" }, _set: { amount: 99, category: food }) { amount category } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_expense_by_pk: { amount: 99, category: 'food' } });
+
+    const sel = await graphql<{ expense_summary: { amount_usd: number }[] }>(
+      `{ expense_summary(where: { expense_id: { _eq: "${id}" } }) { amount_usd rate expense { description } } }`,
+      { auth },
+    );
+    expect(sel.data!.expense_summary).toEqual([{ amount_usd: 99, rate: 1, expense: { description: DESCRIPTION } }]);
+
+    const del = await graphql(`mutation { delete_expense_by_pk(id: "${id}") { id } }`, { auth });
+    expect(del.errors).toBeUndefined();
+  });
+
+  it('manager reads the categories and cannot write them or the view', async () => {
+    const token = await signTestJwt();
+    const cats = await graphql<{ expense_category: { value: string }[] }>('{ expense_category { value comment } }', {
+      auth: { token },
+    });
+    expect(cats.data!.expense_category.map((c) => c.value)).toContain('merchandise');
+    const mutations = await rootFieldNames(token, 'mutationType');
+    expect(mutations.filter((m) => /expense_category|expense_summary/.test(m))).toEqual([]);
+  });
+
+  it('rejects negative amounts', async () => {
+    const r = await graphql(
+      `mutation { insert_expense_one(object: { category: other, description: "${DESCRIPTION}", amount: -1, currency_code: "USD", date: "2026-01-11" }) { id } }`,
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(r.errors?.[0]?.message).toMatch(/expense_amount_check/);
+  });
+
+  it('a Viaje with Gastos cannot be deleted', async () => {
+    const auth = { token: await signTestJwt() };
+    const trip = await graphql<{ insert_trip_one: { id: string } }>(
+      `mutation { insert_trip_one(object: { name: "Viaje con Gastos", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02", expenses: { data: [{ category: flights, description: "${DESCRIPTION}", amount: 300, currency_code: "USD", date: "2026-02-01" }] } }) { id } }`,
+      { auth },
+    );
+    expect(trip.errors).toBeUndefined();
+    const id = trip.data!.insert_trip_one.id;
+    const del = await graphql(`mutation { delete_trip_by_pk(id: "${id}") { id } }`, { auth });
+    expect(errorCode(del)).toBe('constraint-violation');
+    await asAdmin(`mutation { delete_expense(where: { trip_id: { _eq: "${id}" } }) { affected_rows } delete_trip_by_pk(id: "${id}") { id } }`);
+  });
+});

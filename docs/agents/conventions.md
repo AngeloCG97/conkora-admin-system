@@ -30,6 +30,7 @@ tests/                    integration tests against the running stack
   helpers/env.ts          URLs/secrets (defaults = docker-compose defaults)
   helpers/hasura.ts       graphql(), asManager(), asAdmin(), signTestJwt(), rootFieldNames()
   helpers/db.ts           withRollback(fn) — pg client inside a rolled-back transaction
+  helpers/fixtures.ts     insertTrip / setGlobalRate / insertExpense … (fixture builders for SQL tests)
   hasura/permissions.test.ts   role `manager` permissions
   api/*.test.ts           Hapi endpoints end to end
   db/*.test.ts            SQL tables/views (financial calculations)
@@ -100,24 +101,56 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 `invalid-headers` = no JWT, `invalid-jwt` = expired/bad signature, `validation-failed` = field not in role schema,
 `constraint-violation` = FK/unique/check failed).
 
-## Adding a SQL view (financial calculations, PRD "Módulo 1")
+## Financial calculations (PRD "Módulo 1", ADR-0002)
 
-1. `CREATE VIEW` in a new migration (`down.sql`: `DROP VIEW`). Conversion happens in the view (ADR-0002);
-   use `COALESCE(..., 0)` so empty aggregates are `0`, and `round(x, 2)` for money outputs.
-2. Track it with a `public_<view>.yaml` (select permission for `manager` only) and add relationships
-   from the tables (`manual_configuration` with `remote_table` + `column_mapping`).
-3. Test in `tests/db/<view>.test.ts` straight against Postgres:
+- Amounts are stored only in their original currency. Conversion happens **at query time** in SQL views;
+  never store converted amounts and never convert in the frontend.
+- Rates are **units of the currency per 1 USD** (`numeric(18,6)`); USD is always 1.
+- **Effective rate**: `effective_rate(trip_id uuid, currency_code text) → numeric` (migration
+  `create_expense`) = `trip_rate.rate` if the Viaje fixes one, else `currency.global_rate`. Pass
+  `trip_id = NULL` for Personal. Every view converts through it:
+  - to USD: `amount / effective_rate(trip_id, currency)`
+  - Abono to the Pedido's currency: `amount / effective_rate(o.trip_id, p.currency_code) * effective_rate(o.trip_id, o.currency_code)`
+    (rates of the **Pedido's** Viaje).
+- Outputs: `round(x, 2)` on money columns; `COALESCE(sum(...), 0)` so empty aggregates are `0`, never null.
+  For totals, sum the unrounded values and round once at the end (round per row only for per-row columns).
+- Existing views: `expense_summary` (`expense_id, trip_id, category, currency_code, rate, amount_usd`),
+  exposed as the object relationship `expense.summary`. Expense categories are the enum table
+  `expense_category` (`flights, lodging, food, car_rental, merchandise, general, other`; `comment` = Spanish
+  label, Hasura returns them in seed order).
+
+## Adding a SQL view (financial calculations)
+
+1. `CREATE VIEW` in a new migration (`down.sql`: `DROP VIEW`), converting with `effective_rate` as above.
+   Expose the columns frontends filter on (e.g. `trip_id`, `category`) so the same `where` works on the
+   table and on the view's `_aggregate`.
+2. Track it with a `public_<view>.yaml` (**only** `select_permissions` for `manager`, `allow_aggregations: true`)
+   and add relationships from the tables (`manual_configuration` with `remote_table` + `column_mapping`),
+   see `public_expense.yaml` → `summary`. Add a case to `tests/hasura/permissions.test.ts`: manager reads
+   it, and no `insert_/update_/delete_<view>` mutation exists.
+3. Test the numbers in `tests/db/<view>.test.ts` straight against Postgres (the **SQL test harness**):
+   `withRollback` gives a pg client inside a transaction that is always rolled back, so tests insert
+   fixtures freely, never leave data behind and can run in any order. NUMERIC comes back as JS `number`.
+   Build fixtures with `tests/helpers/fixtures.ts` (add builders there for new tables: `insertCustomer`,
+   `insertOrder`, …) and pin rates explicitly with `setGlobalRate` / `insertTrip({ rates })` instead of
+   relying on seeded values:
 
    ```ts
    import { withRollback } from '../helpers/db.ts';
-   it('Pedido sin Artículos ni Abonos → Total 0', () => withRollback(async (db) => {
-     const { rows: [c] } = await db.query(`INSERT INTO customer (name) VALUES ('Ana') RETURNING id`);
-     // ...insert fixtures...
-     const { rows } = await db.query('SELECT total FROM order_summary WHERE order_id = $1', [orderId]);
-     expect(rows[0].total).toBe(0); // NUMERIC is parsed to number in helpers/db.ts
+   import { insertExpense, insertTrip, setGlobalRate } from '../helpers/fixtures.ts';
+   it('Viaje sin tipo para CRC usa el global', () => withRollback(async (db) => {
+     await setGlobalRate(db, 'CRC', 500);
+     const tripId = await insertTrip(db, { rates: { EUR: 0.9 } });
+     const id = await insertExpense(db, { tripId, amount: 25000, currency: 'CRC' });
+     const { rows } = await db.query('SELECT amount_usd FROM expense_summary WHERE expense_id = $1', [id]);
+     expect(rows[0].amount_usd).toBe(50);
    }));
    ```
-   Everything rolls back, so tests never leave data behind and can run in any order.
+   Inside one `withRollback`, a failing statement aborts the transaction: put each expected error in its own test.
+4. Run: `scripts/test-integration.sh db/<view>.test.ts` locally (starts the stack, applies migrations);
+   CI must run the whole suite with the same single command, `npm test` (it brings up the docker compose
+   stack itself; the GitHub Actions workflow is pending, see PR for #5). After adding a migration to a
+   running stack, `docker compose restart hasura`.
 
 ## Backend (Hapi)
 
@@ -165,7 +198,12 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Parent/child + detail: list page (`viajes/page.tsx`) links to `viajes/detalle/?id=` (cards via `CardActionArea component={Link}`);
   the detail page owns edit (`viajes/TripDialog.tsx`, shared create/edit dialog), delete (`useConfirm`, `constraint-violation`
   message) and the child rows (`trip_rate`, composite PK, upsert with `on_conflict: { constraint: trip_rate_pkey, ... }`).
-  Dates: `src/lib/dates.ts` (`formatDate`, `formatDateRange`), never `new Date(iso)`.
+  Dates: `src/lib/dates.ts` (`formatDate`, `formatDateRange`, `todayIso`), never `new Date(iso)`.
+- Filtered lists (`gastos/page.tsx`): filters in `useState`, turned into a Hasura `where` by a pure, unit-tested
+  helper (`gastos/expenses.ts` → `expenseWhere`, Viaje filter `all | personal | trip`); query key
+  `['expenses', filters]`, mutations invalidate the prefix `['expenses']`. Select options in their own
+  query (`['expense-options']`). Enum columns (e.g. `category`) are GraphQL enums: pass the value as a
+  string variable (`"merchandise"`), labels come from the enum table's `comment`.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

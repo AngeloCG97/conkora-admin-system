@@ -1,0 +1,17 @@
+# View (read-only): effective exchange rate and USD equivalent of each Gasto.
+table:
+  name: expense_summary
+  schema: public
+object_relationships:
+  - name: expense
+    using:
+      manual_configuration:
+        remote_table: { name: expense, schema: public }
+        column_mapping: { expense_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [expense_id, trip_id, category, currency_code, rate, amount_usd]
+      filter: {}
+      allow_aggregations: true

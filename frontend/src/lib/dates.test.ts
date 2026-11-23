@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDate, formatDateRange } from './dates';
+import { formatDate, formatDateRange, todayIso } from './dates';
 
 describe('dates', () => {
   it('formats ISO dates as dd/mm/yyyy', () => {
@@ -8,5 +8,8 @@ describe('dates', () => {
   });
   it('formats a range', () => {
     expect(formatDateRange('2026-01-10', '2026-01-15')).toBe('10/01/2026 – 15/01/2026');
+  });
+  it('gives today as a local ISO date', () => {
+    expect(todayIso(new Date(2026, 0, 5, 23, 59))).toBe('2026-01-05');
   });
 });
