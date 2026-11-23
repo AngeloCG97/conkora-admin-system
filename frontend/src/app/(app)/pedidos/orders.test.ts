@@ -5,8 +5,8 @@ describe('orderWhere', () => {
   it('has no conditions without filters', () => {
     expect(orderWhere({ trip: { kind: 'all' }, customerId: null, status: null })).toEqual({});
   });
-  it('filters Personal Pedidos (no Viaje)', () => {
-    expect(orderWhere({ trip: { kind: 'personal' }, customerId: null, status: null })).toEqual({
+  it('filters General Pedidos (no Viaje)', () => {
+    expect(orderWhere({ trip: { kind: 'general' }, customerId: null, status: null })).toEqual({
       trip_id: { _is_null: true },
     });
   });

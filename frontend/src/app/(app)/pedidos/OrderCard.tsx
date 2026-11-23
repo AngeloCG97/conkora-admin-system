@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/dates';
 import { formatMoney } from '@/lib/money';
 import { ORDER_FIELDS, type Order } from './OrderDialog';
 import { paymentState } from './orders';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 /** Total, Abono and Saldo of a Pedido as computed by the `order_summary` view (never computed here). */
 export interface OrderSummary {
@@ -69,7 +70,7 @@ export function OrderCard({
           <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
             {showCustomer && <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{order.customer.name}</Typography>}
             <Typography variant="body2" color="text.secondary">
-              {formatDate(order.date)} · {order.trip?.name ?? 'Personal'}
+              {formatDate(order.date)} · {order.trip?.name ?? NO_TRIP_LABEL}
             </Typography>
             <Stack direction="row" spacing={0.5} useFlexGap sx={{ flexWrap: 'wrap' }}>
               <Chip

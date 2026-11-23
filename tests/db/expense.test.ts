@@ -44,7 +44,7 @@ describe('expense_summary (USD equivalent of each Gasto)', () => {
       expect(await amountUsd(db, id)).toEqual({ rate: 500, amount_usd: 50 });
     }));
 
-  it('Gasto sin Viaje (Personal) usa el global aunque otro Viaje tenga tipo propio', () =>
+  it('Gasto sin Viaje (General) usa el global aunque otro Viaje tenga tipo propio', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       await insertTrip(db, { rates: { CRC: 400 } });
@@ -74,7 +74,7 @@ describe('expense_summary (USD equivalent of each Gasto)', () => {
       expect((await amountUsd(db, c)).amount_usd).toBe(0);
     }));
 
-  it('cambiar el tipo del Viaje recalcula sus Gastos; los Personales no cambian', () =>
+  it('cambiar el tipo del Viaje recalcula sus Gastos; los Generales no cambian', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const tripId = await insertTrip(db, { rates: { CRC: 500 } });
@@ -103,16 +103,26 @@ describe('expense integrity', () => {
       await expect(insertExpense(db, { amount: 1, currency: 'QQQ' })).rejects.toThrow(/expense_currency_code_fkey/);
     }));
 
-  it('accepts every PRD category, Mercadería included', () =>
+  it('accepts every category, Mercadería and Combustible included', () =>
     withRollback(async (db) => {
       const { rows } = await db.query('SELECT comment FROM expense_category');
       expect(rows.map((r) => r.comment).sort()).toEqual(
-        ['Alimentación', 'Alquiler de carro', 'Gastos generales', 'Hospedaje', 'Mercadería', 'Otro', 'Vuelos'],
+        ['Alimentación', 'Alquiler de carro', 'Combustible', 'Gastos generales', 'Hospedaje', 'Mercadería', 'Otro', 'Vuelos'],
       );
       const tripId = await insertTrip(db);
       const id = await insertExpense(db, { tripId, amount: 300, category: 'merchandise' });
       const { rows: [e] } = await db.query('SELECT category FROM expense_summary WHERE expense_id = $1', [id]);
       expect(e.category).toBe('merchandise');
+    }));
+
+  it('a Gasto is not personal by default and can be marked personal', () =>
+    withRollback(async (db) => {
+      const plain = await insertExpense(db, { amount: 1 });
+      const personal = await insertExpense(db, { amount: 1, category: 'fuel', isPersonal: true });
+      const { rows } = await db.query(
+        'SELECT expense_id, is_personal FROM expense_summary WHERE expense_id = ANY($1)', [[plain, personal]],
+      );
+      expect(Object.fromEntries(rows.map((r) => [r.expense_id, r.is_personal]))).toEqual({ [plain]: false, [personal]: true });
     }));
 
   it('a Viaje with Gastos cannot be deleted (RESTRICT)', () =>

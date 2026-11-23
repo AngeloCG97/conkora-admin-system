@@ -1,10 +1,10 @@
-# View (read-only): per Viaje Ingreso, cobrado, pendiente, Gastos and Utilidad in USD (Cancelados excluded; 0s when empty).
+# View (read-only): per Viaje Ingreso, cobrado, pendiente, Gastos (with Gastos personales / del negocio subtotals) and Utilidad in USD (Cancelados excluded; 0s when empty).
 table:
   name: trip_summary
   schema: public
 select_permissions:
   - role: manager
     permission:
-      columns: [trip_id, order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd]
+      columns: [trip_id, order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd, personal_expenses_usd, business_expenses_usd]
       filter: {}
       allow_aggregations: true

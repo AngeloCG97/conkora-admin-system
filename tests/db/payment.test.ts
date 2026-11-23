@@ -75,10 +75,10 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect([b.paid, b.balance, b.paid_usd, b.balance_usd]).toEqual([40, 40, 50, 50]);
     }));
 
-  it('a Personal Pedido converts its Abonos with the global rate', () =>
+  it('a General Pedido converts its Abonos with the global rate', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 520);
-      await insertTrip(db, { rates: { CRC: 500 } }); // a Viaje rate must not leak into Personal
+      await insertTrip(db, { rates: { CRC: 500 } }); // a Viaje rate must not leak into General
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
       await insertOrderItem(db, { orderId, price: 100 });
       await insertPayment(db, { orderId, amount: 26000, currency: 'CRC' }); // 26000 / 520 = $50
@@ -97,7 +97,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect((await balance(db, orderId)).balance).toBe(50);
     }));
 
-  it('changing the Viaje rate recalculates its Saldo; Personal Pedidos do not change', () =>
+  it('changing the Viaje rate recalculates its Saldo; General Pedidos do not change', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const customerId = await insertCustomer(db);
@@ -114,7 +114,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect((await balance(db, personal)).balance).toBe(50);
     }));
 
-  it('changing the global rate recalculates Personal Saldos', () =>
+  it('changing the global rate recalculates General Saldos', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });

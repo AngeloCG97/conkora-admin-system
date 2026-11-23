@@ -12,11 +12,12 @@ describe('no_trip_summary', () => {
     await db.query(`DELETE FROM expense WHERE trip_id IS NULL`);
     await db.query(`DELETE FROM "order" WHERE trip_id IS NULL`);
     expect(await summary(db)).toEqual([
-      { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0 },
+      { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0,
+        personal_expenses_usd: 0, business_expenses_usd: 0 },
     ]);
   }));
 
-  it('sums Pedidos and Gastos without Viaje in USD, excluding Cancelados and Viaje data', () => withRollback(async (db) => {
+  it('sums General Pedidos and Gastos (no Viaje) in USD, excluding Cancelados and Viaje data', () => withRollback(async (db) => {
     await db.query(`DELETE FROM expense WHERE trip_id IS NULL`);
     await db.query(`DELETE FROM "order" WHERE trip_id IS NULL`);
     await setGlobalRate(db, 'CRC', 500);
@@ -36,12 +37,13 @@ describe('no_trip_summary', () => {
     const t = await insertOrder(db, { customerId, tripId });
     await insertOrderItem(db, { orderId: t, price: 777 });
 
-    await insertExpense(db, { amount: 40 });
+    await insertExpense(db, { amount: 40, isPersonal: true });
     await insertExpense(db, { amount: 10000, currency: 'CRC' }); // $20
     await insertExpense(db, { tripId, amount: 1000 }); // Viaje: does not count
 
     expect(await summary(db)).toEqual([
-      { order_count: 2, income_usd: 200, collected_usd: 50, pending_usd: 150, expenses_usd: 60, profit_usd: 140 },
+      { order_count: 2, income_usd: 200, collected_usd: 50, pending_usd: 150, expenses_usd: 60, profit_usd: 140,
+        personal_expenses_usd: 40, business_expenses_usd: 20 },
     ]);
   }));
 
@@ -50,7 +52,8 @@ describe('no_trip_summary', () => {
     await db.query(`DELETE FROM "order" WHERE trip_id IS NULL`);
     await insertExpense(db, { amount: 25 });
     expect(await summary(db)).toEqual([
-      { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 25, profit_usd: -25 },
+      { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 25, profit_usd: -25,
+        personal_expenses_usd: 0, business_expenses_usd: 25 },
     ]);
   }));
 });

@@ -17,20 +17,20 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [id, trip_id, category, description, amount, currency_code, date, created_at]
+      columns: [id, trip_id, category, description, amount, currency_code, date, is_personal, created_at]
       filter: {}
       allow_aggregations: true
 insert_permissions:
   - role: manager
     permission:
       check: {}
-      columns: [trip_id, category, description, amount, currency_code, date]
+      columns: [trip_id, category, description, amount, currency_code, date, is_personal]
 update_permissions:
   - role: manager
     permission:
       filter: {}
       check: {}
-      columns: [trip_id, category, description, amount, currency_code, date]
+      columns: [trip_id, category, description, amount, currency_code, date, is_personal]
 delete_permissions:
   - role: manager
     permission:

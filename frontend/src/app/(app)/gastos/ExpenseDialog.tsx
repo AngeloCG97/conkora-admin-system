@@ -5,8 +5,11 @@ import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FormHelperText from '@mui/material/FormHelperText';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
@@ -16,6 +19,7 @@ import { useConfirm, useNotify } from '@/components/feedback/FeedbackProvider';
 import { todayIso } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { parseAmount } from './expenses';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 export interface Expense {
   id: string;
@@ -25,9 +29,10 @@ export interface Expense {
   amount: number;
   currency_code: string;
   date: string;
+  is_personal: boolean;
 }
 
-export const EXPENSE_FIELDS = 'id trip_id category description amount currency_code date';
+export const EXPENSE_FIELDS = 'id trip_id category description amount currency_code date is_personal';
 
 /** Choices for the form selects (loaded once by the page). */
 export interface ExpenseOptions {
@@ -73,6 +78,7 @@ export function ExpenseDialog({
   const [currencyCode, setCurrencyCode] = useState(expense?.currency_code ?? 'USD');
   const [date, setDate] = useState(expense?.date ?? todayIso());
   const [tripId, setTripId] = useState(expense ? (expense.trip_id ?? NO_TRIP) : (defaultTripId ?? NO_TRIP));
+  const [isPersonal, setIsPersonal] = useState(expense?.is_personal ?? false);
   const [touched, setTouched] = useState(false);
 
   const amountValue = parseAmount(amount);
@@ -94,6 +100,7 @@ export function ExpenseDialog({
         currency_code: currencyCode,
         date,
         trip_id: tripId === NO_TRIP ? null : tripId,
+        is_personal: isPersonal,
       };
       return expense
         ? gqlRequest(UPDATE_EXPENSE, { id: expense.id, set: fields })
@@ -184,16 +191,25 @@ export function ExpenseDialog({
             label="Viaje"
             value={tripId}
             onChange={(e) => setTripId(e.target.value)}
-            helperText="Sin Viaje = Personal (usa el tipo de cambio global)"
+            helperText={`Sin Viaje = ${NO_TRIP_LABEL} (usa el tipo de cambio global)`}
             slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
           >
-            <MenuItem value={NO_TRIP}>Sin Viaje (Personal)</MenuItem>
+            <MenuItem value={NO_TRIP}>{NO_TRIP_LABEL} (sin Viaje)</MenuItem>
             {options.trip.map((t) => (
               <MenuItem key={t.id} value={t.id}>
                 {t.name}
               </MenuItem>
             ))}
           </TextField>
+          <div>
+            <FormControlLabel
+              control={<Switch checked={isPersonal} onChange={(e) => setIsPersonal(e.target.checked)} />}
+              label="Gasto personal"
+            />
+            <FormHelperText sx={{ mt: 0 }}>
+              Manutención de quien viaja (por ejemplo alimentación o combustible). Resta en la Utilidad y se muestra aparte.
+            </FormHelperText>
+          </div>
         </Stack>
       </DialogContent>
       <DialogActions>

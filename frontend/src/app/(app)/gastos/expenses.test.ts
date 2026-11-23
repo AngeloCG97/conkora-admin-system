@@ -2,16 +2,24 @@ import { describe, expect, it } from 'vitest';
 import { expenseWhere, parseAmount } from './expenses';
 
 describe('expenseWhere', () => {
-  it('has no conditions for every Viaje and category', () => {
-    expect(expenseWhere({ trip: { kind: 'all' }, category: null })).toEqual({});
+  it('has no conditions for every Viaje, category and kind', () => {
+    expect(expenseWhere({ trip: { kind: 'all' }, category: null, personal: null })).toEqual({});
   });
-  it('filters Personal Gastos (no Viaje)', () => {
-    expect(expenseWhere({ trip: { kind: 'personal' }, category: null })).toEqual({ trip_id: { _is_null: true } });
+  it('filters General Gastos (no Viaje)', () => {
+    expect(expenseWhere({ trip: { kind: 'general' }, category: null, personal: null })).toEqual({
+      trip_id: { _is_null: true },
+    });
   });
   it('filters by Viaje and category', () => {
-    expect(expenseWhere({ trip: { kind: 'trip', id: 'abc' }, category: 'merchandise' })).toEqual({
+    expect(expenseWhere({ trip: { kind: 'trip', id: 'abc' }, category: 'merchandise', personal: null })).toEqual({
       trip_id: { _eq: 'abc' },
       category: { _eq: 'merchandise' },
+    });
+  });
+  it('filters Gastos personales or del negocio', () => {
+    expect(expenseWhere({ trip: { kind: 'all' }, category: null, personal: true })).toEqual({ is_personal: { _eq: true } });
+    expect(expenseWhere({ trip: { kind: 'all' }, category: null, personal: false })).toEqual({
+      is_personal: { _eq: false },
     });
   });
 });

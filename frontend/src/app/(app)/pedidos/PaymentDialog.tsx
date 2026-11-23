@@ -17,6 +17,7 @@ import { useConfirm, useNotify } from '@/components/feedback/FeedbackProvider';
 import { todayIso } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { parsePaymentAmount } from './orders';
+import { NO_TRIP_LABEL } from '@/lib/terms';
 
 export interface Payment {
   id: string;
@@ -141,7 +142,7 @@ export function PaymentDialog({
           </Stack>
           {currencyCode !== orderCurrencyCode && (
             <Typography variant="body2" color="text.secondary">
-              Se convierte a {orderCurrencyCode} con el tipo de cambio del Viaje del Pedido (o el global si es Personal).
+              Se convierte a {orderCurrencyCode} con el tipo de cambio del Viaje del Pedido (o el global si es {NO_TRIP_LABEL}).
             </Typography>
           )}
           <TextField

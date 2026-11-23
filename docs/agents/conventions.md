@@ -108,16 +108,20 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Rates are **units of the currency per 1 USD** (`numeric(18,6)`); USD is always 1.
 - **Effective rate**: `effective_rate(trip_id uuid, currency_code text) → numeric` (migration
   `create_expense`) = `trip_rate.rate` if the Viaje fixes one, else `currency.global_rate`. Pass
-  `trip_id = NULL` for Personal. Every view converts through it:
+  `trip_id = NULL` for General (no Viaje; never call it "Personal"). Every view converts through it:
   - to USD: `amount / effective_rate(trip_id, currency)`
   - Abono to the Pedido's currency: `amount / effective_rate(o.trip_id, p.currency_code) * effective_rate(o.trip_id, o.currency_code)`
     (rates of the **Pedido's** Viaje).
 - Outputs: `round(x, 2)` on money columns; `COALESCE(sum(...), 0)` so empty aggregates are `0`, never null.
   For totals, sum the unrounded values and round once at the end (round per row only for per-row columns).
-- Existing views: `expense_summary` (`expense_id, trip_id, category, currency_code, rate, amount_usd`),
+- Existing views: `expense_summary` (`expense_id, trip_id, category, currency_code, rate, amount_usd, is_personal`),
   exposed as the object relationship `expense.summary`. Expense categories are the enum table
-  `expense_category` (`flights, lodging, food, car_rental, merchandise, general, other`; `comment` = Spanish
-  label, Hasura returns them in seed order).
+  `expense_category` (`flights, lodging, food, car_rental, merchandise, general, other, fuel`; `comment` = Spanish
+  label, Hasura returns them in seed order, so `fuel`/Combustible comes last).
+- Gasto personal (migration `personal_expenses_and_business_summary`): `expense.is_personal boolean NOT NULL DEFAULT false`,
+  independent of category and of the Viaje. It still counts in `expenses_usd` and the Utilidad; `trip_summary` and
+  `no_trip_summary` append `personal_expenses_usd` and `business_expenses_usd` (= the two subtotals of `expenses_usd`).
+  Fixture: `insertExpense({ isPersonal: true })`.
 - `order_summary` (`order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd`; migration
   `create_order_and_items`), exposed as `order.summary`. `total` = Σ price × quantity in the Pedido's currency (0 when
   it has no Artículos), `total_usd` converts with the Viaje's effective rate. It **includes Cancelados**: the
@@ -137,7 +141,7 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Cuenta del Cliente (migration `create_customer_summaries`, USD, Cancelados excluded, sums the per-Pedido rounded columns):
   `customer_summary` (`customer_id, order_count, total_usd, paid_usd, balance_usd`; one row per Cliente, zeros/0 when no Pedidos;
   `customer.summary`) and `customer_trip_summary` (`customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd`; one row per
-  Cliente and Viaje with non-cancelled Pedidos, `trip_id` null = Personal; `customer.trip_summaries`, `trip.customer_summaries`,
+  Cliente and Viaje with non-cancelled Pedidos, `trip_id` null = General; `customer.trip_summaries`, `trip.customer_summaries`,
   `customer_trip_summary.trip`). Frontend: `clientes/AccountFigures.tsx`; account queries use keys `['orders', 'customers' | 'customer-account', ...]`
   so Abono/Pedido mutations (which invalidate `['orders']`) refresh them; the Clientes list sorts by Saldo via
   `order_by: { summary: { balance_usd: desc } }` (`customerOrderBy`).
@@ -223,7 +227,7 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   message) and the child rows (`trip_rate`, composite PK, upsert with `on_conflict: { constraint: trip_rate_pkey, ... }`).
   Dates: `src/lib/dates.ts` (`formatDate`, `formatDateRange`, `todayIso`), never `new Date(iso)`.
 - Filtered lists (`gastos/page.tsx`): filters in `useState`, turned into a Hasura `where` by a pure, unit-tested
-  helper (`gastos/expenses.ts` → `expenseWhere`, Viaje filter `all | personal | trip`); query key
+  helper (`gastos/expenses.ts` → `expenseWhere`, Viaje filter `all | general | trip`, `personal: boolean | null`); query key
   `['expenses', filters]`, mutations invalidate the prefix `['expenses']`. Select options in their own
   query (`['expense-options']`). Enum columns (e.g. `category`) are GraphQL enums: pass the value as a
   string variable (`"merchandise"`), labels come from the enum table's `comment`.
@@ -236,13 +240,16 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   Pedido lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
   `justifyContent`/`alignItems` inside `sx`.
 - Reporte por Viaje (`viajes/TripReport.tsx`): SQL views `trip_summary` (one row per Viaje, 0s when empty; `income_usd`, `collected_usd`,
-  `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`) and `trip_expense_category_summary`, exposed as `trip.summary` /
+  `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`, `personal_expenses_usd`, `business_expenses_usd`) and `trip_expense_category_summary`, exposed as `trip.summary` /
   `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
   Gasto and trip-rate mutations also invalidate `['orders']`.
 - Inicio (`(app)/page.tsx`, migration `create_no_trip_summary`): SQL view `no_trip_summary` (same columns as `trip_summary` minus `trip_id`; always one row,
   0s when empty; Pedidos/Gastos with `trip_id IS NULL`, Cancelados excluded). The dashboard shows Saldo total (`customer_summary_aggregate` sum),
-  the last 5 Viajes with Utilidad (`trip_summary_aggregate` for the card) and the no-Viaje Ingreso/Gastos/Saldo. No global Utilidad (not approved; issue #11 open).
-  The label for "no Viaje" lives in `lib/terms.ts` (`NO_TRIP_LABEL`, currently "Personal"); rename it there once #11 is decided.
+  the last 5 Viajes with Utilidad (`trip_summary_aggregate` for the card) and the General Ingreso/Gastos/Saldo.
+  Utilidad global: view `business_summary` (one row, 0s when empty; same money columns as `trip_summary` minus `trip_id`) defined as
+  Σ (`trip_summary` UNION ALL `no_trip_summary`), so it always equals the sum of the reports; shown at the top of Inicio.
+  The label for "no Viaje" is `NO_TRIP_LABEL` = "General" in `lib/terms.ts`: always use it, never hard-code it. "Personal" in the UI
+  only ever means Gasto personal.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

@@ -26,7 +26,7 @@ export async function setGlobalRate(db: pg.PoolClient, code: string, rate: numbe
   );
 }
 
-/** Inserts a Gasto. `tripId` null/omitted = Personal. */
+/** Inserts a Gasto. `tripId` null/omitted = General; `isPersonal` marks a Gasto personal. */
 export async function insertExpense(
   db: pg.PoolClient,
   {
@@ -34,12 +34,13 @@ export async function insertExpense(
     amount,
     currency = 'USD',
     category = 'other',
-  }: { tripId?: string | null; amount: number; currency?: string; category?: string },
+    isPersonal = false,
+  }: { tripId?: string | null; amount: number; currency?: string; category?: string; isPersonal?: boolean },
 ) {
   const { rows: [expense] } = await db.query<{ id: string }>(
-    `INSERT INTO expense (trip_id, category, description, amount, currency_code, date)
-     VALUES ($1, $2, 'Gasto', $3, $4, '2026-01-11') RETURNING id`,
-    [tripId, category, amount, currency],
+    `INSERT INTO expense (trip_id, category, description, amount, currency_code, date, is_personal)
+     VALUES ($1, $2, 'Gasto', $3, $4, '2026-01-11', $5) RETURNING id`,
+    [tripId, category, amount, currency, isPersonal],
   );
   return expense.id;
 }
@@ -53,7 +54,7 @@ export async function insertCustomer(db: pg.PoolClient, { name = 'Cliente', phon
   return customer.id;
 }
 
-/** Inserts a Pedido. `tripId` null/omitted = Personal. Add Artículos with `insertOrderItem`. */
+/** Inserts a Pedido. `tripId` null/omitted = General. Add Artículos with `insertOrderItem`. */
 export async function insertOrder(
   db: pg.PoolClient,
   {

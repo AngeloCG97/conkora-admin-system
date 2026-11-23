@@ -12,6 +12,6 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [expense_id, trip_id, category, currency_code, rate, amount_usd]
+      columns: [expense_id, trip_id, category, currency_code, rate, amount_usd, is_personal]
       filter: {}
       allow_aggregations: true

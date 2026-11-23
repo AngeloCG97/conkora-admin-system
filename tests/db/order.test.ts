@@ -36,7 +36,7 @@ describe('order_summary (Total of each Pedido)', () => {
       expect(await summary(db, orderId)).toEqual({ rate: 500, total: 50000, total_usd: 100 });
     }));
 
-  it('a Viaje without a rate for the currency, or a Personal Pedido, uses the global rate', () =>
+  it('a Viaje without a rate for the currency, or a General Pedido, uses the global rate', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       await setGlobalRate(db, 'EUR', 0.9);
@@ -50,7 +50,7 @@ describe('order_summary (Total of each Pedido)', () => {
       }
     }));
 
-  it('changing the Viaje rate changes its Pedidos USD Total but not Personal ones', () =>
+  it('changing the Viaje rate changes its Pedidos USD Total but not General ones', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const customerId = await insertCustomer(db);
