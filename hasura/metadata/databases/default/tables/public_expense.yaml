@@ -1,0 +1,37 @@
+table:
+  name: expense
+  schema: public
+object_relationships:
+  - name: trip
+    using:
+      foreign_key_constraint_on: trip_id
+  - name: currency
+    using:
+      foreign_key_constraint_on: currency_code
+  - name: summary
+    using:
+      manual_configuration:
+        remote_table: { name: expense_summary, schema: public }
+        column_mapping: { id: expense_id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, trip_id, category, description, amount, currency_code, date, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [trip_id, category, description, amount, currency_code, date]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [trip_id, category, description, amount, currency_code, date]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}
