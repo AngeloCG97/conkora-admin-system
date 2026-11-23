@@ -1,0 +1,70 @@
+# Builds the static frontend (Next.js `output: 'export'`) and publishes it on GitHub Pages
+# (ADR-0001). URLs come from repository variables (Settings → Secrets and variables → Actions →
+# Variables); see docs/despliegue.md, step 5.
+name: Deploy frontend to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - frontend/**
+      - .github/workflows/deploy-pages.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - id: pages
+        uses: actions/configure-pages@v6
+      - name: Check repository variables
+        env:
+          NEXT_PUBLIC_HASURA_GRAPHQL_URL: ${{ vars.NEXT_PUBLIC_HASURA_GRAPHQL_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+        run: |
+          missing=0
+          for name in NEXT_PUBLIC_HASURA_GRAPHQL_URL NEXT_PUBLIC_API_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository variable $name (see docs/despliegue.md, step 5)"
+              missing=1
+            fi
+          done
+          exit $missing
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_HASURA_GRAPHQL_URL: ${{ vars.NEXT_PUBLIC_HASURA_GRAPHQL_URL }}
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL }}
+          # "/conkora-admin-system" for a project site; the variable overrides it if set.
+          NEXT_PUBLIC_BASE_PATH: ${{ vars.NEXT_PUBLIC_BASE_PATH || steps.pages.outputs.base_path }}
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: frontend/out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5

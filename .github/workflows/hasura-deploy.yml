@@ -1,0 +1,64 @@
+# Applies hasura/migrations and hasura/metadata to Hasura Cloud (ADR-0001).
+# Secrets (Settings → Secrets and variables → Actions → Secrets): HASURA_ENDPOINT
+# (e.g. https://<project>.hasura.app, without /v1/graphql) and HASURA_ADMIN_SECRET.
+# See docs/despliegue.md, step 5.
+name: Deploy Hasura migrations and metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - hasura/**
+      - .github/workflows/hasura-deploy.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hasura-deploy
+  cancel-in-progress: false
+
+env:
+  # Same version as the engine image in docker-compose.yml.
+  HASURA_CLI_VERSION: v2.51.9
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: hasura
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Hasura CLI
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/hasura" \
+            "https://github.com/hasura/graphql-engine/releases/download/${HASURA_CLI_VERSION}/cli-hasura-linux-amd64"
+          chmod +x "$RUNNER_TEMP/hasura"
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Configure endpoint
+        env:
+          HASURA_ENDPOINT: ${{ secrets.HASURA_ENDPOINT }}
+          HASURA_ADMIN_SECRET: ${{ secrets.HASURA_ADMIN_SECRET }}
+        run: |
+          if [ -z "$HASURA_ENDPOINT" ] || [ -z "$HASURA_ADMIN_SECRET" ]; then
+            echo "::error::Missing secrets HASURA_ENDPOINT / HASURA_ADMIN_SECRET (see docs/despliegue.md, step 5)"
+            exit 1
+          fi
+          endpoint="${HASURA_ENDPOINT%/}"
+          endpoint="${endpoint%/v1/graphql}"
+          # The CLI reads these instead of the local values in config.yaml.
+          echo "HASURA_GRAPHQL_ENDPOINT=$endpoint" >> "$GITHUB_ENV"
+          echo "::add-mask::$HASURA_ADMIN_SECRET"
+          echo "HASURA_GRAPHQL_ADMIN_SECRET=$HASURA_ADMIN_SECRET" >> "$GITHUB_ENV"
+      # 1. Metadata first, so the `default` database (PG_DATABASE_URL) exists for migrate.
+      #    On the very first run the tables do not exist yet: inconsistencies are expected here.
+      - run: hasura metadata apply --skip-update-check
+      # 2. Pending migrations only (already applied ones are tracked in hdb_catalog).
+      - run: hasura migrate apply --database-name default --skip-update-check
+      - run: hasura migrate status --database-name default --skip-update-check
+      # 3. Metadata again, now against the migrated schema; fails if anything is inconsistent.
+      - run: hasura metadata reload --skip-update-check
+      - run: hasura metadata apply --disallow-inconsistent-metadata --skip-update-check
