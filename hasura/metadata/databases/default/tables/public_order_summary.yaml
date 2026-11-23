@@ -1,0 +1,17 @@
+# View (read-only): effective exchange rate and Total (own currency and USD) of each Pedido, cancelled included.
+table:
+  name: order_summary
+  schema: public
+object_relationships:
+  - name: order
+    using:
+      manual_configuration:
+        remote_table: { name: order, schema: public }
+        column_mapping: { order_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd]
+      filter: {}
+      allow_aggregations: true

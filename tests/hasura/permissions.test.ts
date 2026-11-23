@@ -296,3 +296,98 @@ describe('customer', () => {
     expect(r.errors?.[0]?.message).toMatch(/customer_name_check|Check constraint/i);
   });
 });
+
+describe('order, order_item, order_status and order_summary', () => {
+  const NAME = 'Cliente de prueba pedidos';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+      delete_trip(where: { name: { _eq: "Viaje con Pedidos" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager does CRUD on Pedidos and Artículos and reads the Total through summary', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_order_one: { id: string; items: { id: string }[] } }>(
+      `mutation { insert_order_one(object: {
+        customer: { data: { name: "${NAME}" } }, currency_code: "CRC", date: "2026-01-12", status: pending,
+        items: { data: [{ name: "Camisa", price: 12500, quantity: 2, size: "M" }, { name: "Gorra", price: 5000 }] }
+      }) { id items { id } } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const { id, items } = ins.data!.insert_order_one;
+    expect(items).toHaveLength(2);
+
+    const sel = await graphql<{ order_by_pk: { status: string; summary: { total: number; total_usd: number } } }>(
+      `{ order_by_pk(id: "${id}") { status summary { total total_usd } } }`,
+      { auth },
+    );
+    expect(sel.data!.order_by_pk.status).toBe('pending');
+    expect(sel.data!.order_by_pk.summary.total).toBe(30000);
+    expect(sel.data!.order_by_pk.summary.total_usd).toBeGreaterThan(0);
+
+    const upd = await graphql(
+      `mutation { update_order_by_pk(pk_columns: { id: "${id}" }, _set: { status: delivered }) { status }
+        update_order_item_by_pk(pk_columns: { id: "${items[1].id}" }, _set: { quantity: 3 }) { quantity } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_order_by_pk: { status: 'delivered' }, update_order_item_by_pk: { quantity: 3 } });
+
+    const del = await graphql(`mutation { delete_order_item_by_pk(id: "${items[0].id}") { id } }`, { auth });
+    expect(del.errors).toBeUndefined();
+    const total = await graphql<{ order_summary: { total: number }[] }>(
+      `{ order_summary(where: { order_id: { _eq: "${id}" } }) { total } }`,
+      { auth },
+    );
+    expect(total.data!.order_summary).toEqual([{ total: 15000 }]);
+
+    const delOrder = await graphql(`mutation { delete_order_by_pk(id: "${id}") { id } }`, { auth });
+    expect(delOrder.errors).toBeUndefined();
+    const left = await asAdmin<{ order_item: { id: string }[] }>(`{ order_item(where: { order_id: { _eq: "${id}" } }) { id } }`);
+    expect(left.data!.order_item).toEqual([]);
+  });
+
+  it('order_status is a read-only enum and order_summary has no mutations', async () => {
+    const auth = { token: await signTestJwt() };
+    const statuses = await graphql<{ order_status: { value: string }[] }>('{ order_status { value comment } }', { auth });
+    expect(statuses.data!.order_status.map((s) => s.value)).toEqual(['pending', 'delivered', 'cancelled']);
+    const mutations = await rootFieldNames(auth.token, 'mutationType');
+    expect(mutations.filter((m) => /order_status|order_summary/.test(m))).toEqual([]);
+  });
+
+  it('rejects a negative price and a quantity of zero', async () => {
+    const auth = { token: await signTestJwt() };
+    const base = `customer: { data: { name: "${NAME}" } }, currency_code: "USD", date: "2026-01-12"`;
+    const price = await graphql(
+      `mutation { insert_order_one(object: { ${base}, items: { data: [{ name: "x", price: -1 }] } }) { id } }`,
+      { auth },
+    );
+    expect(price.errors?.[0]?.message).toMatch(/order_item_price_check/);
+    const qty = await graphql(
+      `mutation { insert_order_one(object: { ${base}, items: { data: [{ name: "x", price: 1, quantity: 0 }] } }) { id } }`,
+      { auth },
+    );
+    expect(qty.errors?.[0]?.message).toMatch(/order_item_quantity_check/);
+  });
+
+  it('a Cliente or a Viaje with Pedidos cannot be deleted', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_order_one: { id: string; customer_id: string; trip_id: string } }>(
+      `mutation { insert_order_one(object: {
+        customer: { data: { name: "${NAME}" } },
+        trip: { data: { name: "Viaje con Pedidos", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02" } },
+        currency_code: "USD", date: "2026-02-01"
+      }) { id customer_id trip_id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const { customer_id, trip_id } = ins.data!.insert_order_one;
+    const delCustomer = await graphql(`mutation { delete_customer_by_pk(id: "${customer_id}") { id } }`, { auth });
+    expect(errorCode(delCustomer)).toBe('constraint-violation');
+    const delTrip = await graphql(`mutation { delete_trip_by_pk(id: "${trip_id}") { id } }`, { auth });
+    expect(errorCode(delTrip)).toBe('constraint-violation');
+  });
+});

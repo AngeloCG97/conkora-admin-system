@@ -1,0 +1,46 @@
+table:
+  name: order
+  schema: public
+object_relationships:
+  - name: customer
+    using:
+      foreign_key_constraint_on: customer_id
+  - name: trip
+    using:
+      foreign_key_constraint_on: trip_id
+  - name: currency
+    using:
+      foreign_key_constraint_on: currency_code
+  - name: summary
+    using:
+      manual_configuration:
+        remote_table: { name: order_summary, schema: public }
+        column_mapping: { id: order_id }
+        insertion_order: null
+array_relationships:
+  - name: items
+    using:
+      foreign_key_constraint_on:
+        column: order_id
+        table: { name: order_item, schema: public }
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, customer_id, trip_id, currency_code, status, date, notes, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [customer_id, trip_id, currency_code, status, date, notes]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [customer_id, trip_id, currency_code, status, date, notes]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}

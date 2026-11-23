@@ -118,6 +118,12 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   exposed as the object relationship `expense.summary`. Expense categories are the enum table
   `expense_category` (`flights, lodging, food, car_rental, merchandise, general, other`; `comment` = Spanish
   label, Hasura returns them in seed order).
+- `order_summary` (`order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd`; migration
+  `create_order_and_items`), exposed as `order.summary`. `total` = Σ price × quantity in the Pedido's currency (0 when
+  it has no Artículos), `total_usd` converts with the Viaje's effective rate. It **includes Cancelados**: the
+  per-Cliente/Viaje views must filter `status <> 'cancelled'`. `"order"` is a reserved word: always quote it in SQL
+  (GraphQL: `order`, `order_by_pk`, `insert_order_one`). Statuses: enum table `order_status` (`pending, delivered, cancelled`).
+  Fixtures: `insertOrder`, `insertOrderItem`.
 
 ## Adding a SQL view (financial calculations)
 
@@ -207,6 +213,11 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Text search (`clientes/page.tsx`): a `TextField` in `useState`, turned into `_or` of `_ilike` by a pure helper
   (`clientes/customers.ts` → `customerWhere`, escapes `%`/`_`); query key `['customers', where]` with
   `placeholderData: (prev) => prev` so the list doesn't flash while typing.
+- Pedidos (`pedidos/`): `OrderDialog` (create/edit; a new Pedido navigates to its detail; `fixedCustomerId` locks the
+  Cliente, `defaultCustomerId`/`defaultTripId` only preselect), `OrderCard` + `ORDER_ROW_FIELDS` (shared list row, also used
+  on the Cliente detail), `OrderItemDialog`, filters via `orderWhere`. Shared select options: query key `['order-options']`;
+  Pedido lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
+  `justifyContent`/`alignItems` inside `sx`.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

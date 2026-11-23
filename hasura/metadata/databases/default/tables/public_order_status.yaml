@@ -1,0 +1,9 @@
+table:
+  name: order_status
+  schema: public
+is_enum: true
+select_permissions:
+  - role: manager
+    permission:
+      columns: [value, comment]
+      filter: {}
