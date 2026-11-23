@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { graphql, rootFieldNames, signTestJwt, typeNames } from '../helpers/hasura.ts';
+import { afterAll, describe, expect, it } from 'vitest';
+import { asAdmin, graphql, rootFieldNames, signTestJwt, typeNames } from '../helpers/hasura.ts';
 
 /**
  * Hasura permissions for the `manager` role (PRD, "Capa GraphQL de Hasura").
@@ -56,5 +56,58 @@ describe('admin_user', () => {
     });
     expect(result.data).toBeUndefined();
     expect(errorCode(result)).toBe('validation-failed');
+  });
+});
+
+describe('currency', () => {
+  const CODE = 'ZZZ';
+
+  afterAll(async () => {
+    await asAdmin(`mutation { delete_currency(where: { code: { _eq: "${CODE}" } }) { affected_rows } }`);
+  });
+
+  it('manager lists the seeded USD and CRC', async () => {
+    const result = await graphql<{ currency: { code: string; global_rate: number }[] }>(
+      '{ currency(order_by: { code: asc }) { code name symbol global_rate } }',
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(result.errors).toBeUndefined();
+    const usd = result.data!.currency.find((c) => c.code === 'USD');
+    expect(usd?.global_rate).toBe(1);
+    expect(result.data!.currency.map((c) => c.code)).toContain('CRC');
+  });
+
+  it('manager inserts, updates a currency and cannot delete', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql(
+      `mutation { insert_currency_one(object: { code: "${CODE}", name: "Prueba", symbol: "Z", global_rate: 2 }) { code } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const upd = await graphql(
+      `mutation { update_currency_by_pk(pk_columns: { code: "${CODE}" }, _set: { global_rate: 3.5 }) { global_rate } }`,
+      { auth },
+    );
+    expect(upd.errors).toBeUndefined();
+    expect(upd.data).toEqual({ update_currency_by_pk: { global_rate: 3.5 } });
+    expect(await rootFieldNames(auth.token, 'mutationType')).not.toContain('delete_currency');
+  });
+
+  it('rejects invalid codes, non-positive rates and a USD rate other than 1', async () => {
+    const auth = { token: await signTestJwt() };
+    for (const object of [
+      '{ code: "AB", name: "x", symbol: "x", global_rate: 1 }',
+      '{ code: "abc", name: "x", symbol: "x", global_rate: 1 }',
+      `{ code: "${CODE}", name: "x", symbol: "x", global_rate: 0 }`,
+      `{ code: "${CODE}", name: "x", symbol: "x", global_rate: -5 }`,
+    ]) {
+      const r = await graphql(`mutation { insert_currency_one(object: ${object}) { code } }`, { auth });
+      expect(r.errors?.[0]?.message, object).toMatch(/violates check constraint/);
+    }
+    const usd = await graphql(
+      'mutation { update_currency_by_pk(pk_columns: { code: "USD" }, _set: { global_rate: 2 }) { code } }',
+      { auth },
+    );
+    expect(usd.errors?.[0]?.message).toMatch(/currency_usd_rate_is_one/);
   });
 });
