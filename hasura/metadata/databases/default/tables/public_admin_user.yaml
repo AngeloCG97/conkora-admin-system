@@ -1,0 +1,5 @@
+# Tracked so Hapi can query it with the admin secret.
+# Intentionally NO permissions: the `manager` role must never see this table.
+table:
+  name: admin_user
+  schema: public

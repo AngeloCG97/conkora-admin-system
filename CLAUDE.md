@@ -13,3 +13,7 @@ Se usan los nombres por defecto: needs-triage, needs-info, ready-for-agent, read
 ### Domain docs
 
 Un solo contexto: `CONTEXT.md` y `docs/adr/` en la raíz. See `docs/agents/domain.md`.
+
+### Code conventions
+
+Layout, commands (`npm run check`, `npm test`) and how to add tables, Hasura permissions, SQL views, endpoints and pages: `docs/agents/conventions.md`.

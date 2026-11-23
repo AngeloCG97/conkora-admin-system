@@ -1,0 +1,66 @@
+# Local stack: Postgres + Hasura (applies hasura/migrations and hasura/metadata
+# on start) + Hapi API. The frontend runs separately with `npm run dev`.
+# Every value has a dev default; override them in a root `.env` (see .env.example).
+name: conkora
+
+services:
+  postgres:
+    image: postgres:17.12-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: conkora
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d conkora"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  hasura:
+    image: hasura/graphql-engine:v2.51.9.cli-migrations-v3
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_METADATA_DATABASE_URL: postgres://postgres:postgres@postgres:5432/conkora
+      PG_DATABASE_URL: postgres://postgres:postgres@postgres:5432/conkora
+      HASURA_GRAPHQL_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-conkora-dev-admin-secret}
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256","key":"${JWT_SECRET:-conkora-dev-jwt-secret-change-me-0123456789}"}'
+      HASURA_GRAPHQL_CORS_DOMAIN: ${CORS_ORIGIN:-http://localhost:3000}
+      HASURA_GRAPHQL_ENABLE_CONSOLE: "true"
+      HASURA_GRAPHQL_DEV_MODE: "true"
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log
+    ports:
+      - "${HASURA_PORT:-8080}:8080"
+    volumes:
+      - ./hasura/migrations:/hasura-migrations:ro
+      - ./hasura/metadata:/hasura-metadata:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8080/healthz"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+
+  api:
+    build: ./backend
+    depends_on:
+      hasura:
+        condition: service_healthy
+    environment:
+      PORT: "4000"
+      JWT_SECRET: ${JWT_SECRET:-conkora-dev-jwt-secret-change-me-0123456789}
+      HASURA_ADMIN_SECRET: ${HASURA_ADMIN_SECRET:-conkora-dev-admin-secret}
+      HASURA_GRAPHQL_URL: http://hasura:8080/v1/graphql
+      JWT_EXPIRES_IN_SECONDS: ${JWT_EXPIRES_IN_SECONDS:-43200}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-conkora-dev}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+volumes:
+  pgdata:

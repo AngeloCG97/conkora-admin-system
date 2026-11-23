@@ -1,0 +1,11 @@
+# Hasura CLI project (https://hasura.io/docs/2.0/hasura-cli/overview/).
+# Local dev only: the admin secret below is the docker-compose default.
+version: 3
+endpoint: http://localhost:8080
+admin_secret: conkora-dev-admin-secret
+metadata_directory: metadata
+migrations_directory: migrations
+seeds_directory: seeds
+actions:
+  kind: synchronous
+  handler_webhook_baseurl: http://localhost:3000

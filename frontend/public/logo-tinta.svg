@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 56" role="img" aria-label="ConKora">
+  <!-- Placeholder wordmark (versión tinta). Replace with the official ConKora logo file, same name. -->
+  <path fill="#E35D47" d="M28 47 C12 36 4 28 4 18.5 4 11.5 9.4 6 16.2 6 c4.6 0 8.6 2.6 11.8 6.8 C31.2 8.6 35.2 6 39.8 6 46.6 6 52 11.5 52 18.5 52 28 44 36 28 47Z"/>
+  <path fill="#7D9A76" d="M28 47 c3-9 9-14 17-16 -3 8-9 13-17 16Z"/>
+  <text x="62" y="38" fill="#201D1A" font-family="Nunito, 'Segoe UI', system-ui, sans-serif" font-size="30" font-weight="800" letter-spacing="-0.5">Con<tspan fill="#E35D47">K</tspan>ora</text>
+</svg>
