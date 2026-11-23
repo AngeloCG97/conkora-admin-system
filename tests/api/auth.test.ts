@@ -36,3 +36,30 @@ describe('GET /health', () => {
     expect(response.status).toBe(200);
   });
 });
+
+describe('POST /uploads/signature', () => {
+  const sign = (headers: Record<string, string> = {}) =>
+    fetch(`${env.apiUrl}/uploads/signature`, { method: 'POST', headers });
+
+  it('rejects requests without a token or with an invalid one', async () => {
+    expect((await sign()).status).toBe(401);
+    expect((await sign({ authorization: 'Bearer not-a-jwt' })).status).toBe(401);
+  });
+
+  it('answers 503 (not configured) or a signature, never crashes, for a valid token', async () => {
+    const login = await fetch(`${env.apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: env.adminUsername, password: env.adminPassword }),
+    });
+    const { token } = (await login.json()) as { token: string };
+    const response = await sign({ authorization: `Bearer ${token}` });
+    if (process.env.CLOUDINARY_API_SECRET) {
+      expect(response.status).toBe(200);
+      expect(await response.json()).toHaveProperty('signature');
+    } else {
+      expect(response.status).toBe(503);
+      expect(((await response.json()) as { message: string }).message).toContain('Cloudinary');
+    }
+  });
+});

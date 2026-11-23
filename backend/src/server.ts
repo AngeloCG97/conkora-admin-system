@@ -3,9 +3,10 @@ import type { AdminUserStore } from './auth/admin-users.ts';
 import type { Config } from './config.ts';
 import { authRoutes } from './routes/auth.ts';
 import { healthRoutes } from './routes/health.ts';
+import { uploadRoutes } from './routes/uploads.ts';
 
 export interface ServerDeps {
-  config: Pick<Config, 'port' | 'host' | 'corsOrigins' | 'jwt'>;
+  config: Pick<Config, 'port' | 'host' | 'corsOrigins' | 'jwt'> & Partial<Pick<Config, 'cloudinary'>>;
   adminUsers: AdminUserStore;
 }
 
@@ -22,7 +23,9 @@ export function createServer({ config, adminUsers }: ServerDeps): Hapi.Server {
     },
   });
 
-  server.route([...healthRoutes, ...authRoutes({ adminUsers, jwt: config.jwt })]);
+  server.route([...healthRoutes, ...authRoutes({ adminUsers, jwt: config.jwt }),
+    ...uploadRoutes({ jwt: config.jwt, cloudinary: config.cloudinary }),
+  ]);
 
   return server;
 }

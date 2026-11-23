@@ -1,3 +1,5 @@
+import type { CloudinaryConfig } from './uploads/cloudinary.ts';
+
 export interface Config {
   port: number;
   host: string;
@@ -17,6 +19,8 @@ export interface Config {
     username: string;
     password: string;
   };
+  /** Photos of Artículos; null when the three CLOUDINARY_* variables are not all set. */
+  cloudinary: CloudinaryConfig | null;
 }
 
 const MIN_JWT_SECRET_LENGTH = 32;
@@ -35,6 +39,13 @@ function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback: number): nu
     throw new Error(`Environment variable ${name} must be a positive integer`);
   }
   return value;
+}
+
+function loadCloudinary(env: NodeJS.ProcessEnv): CloudinaryConfig | null {
+  const cloudName = env.CLOUDINARY_CLOUD_NAME?.trim();
+  const apiKey = env.CLOUDINARY_API_KEY?.trim();
+  const apiSecret = env.CLOUDINARY_API_SECRET?.trim();
+  return cloudName && apiKey && apiSecret ? { cloudName, apiKey, apiSecret } : null;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -62,5 +73,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       username: required(env, 'ADMIN_USERNAME'),
       password: required(env, 'ADMIN_PASSWORD'),
     },
+    cloudinary: loadCloudinary(env),
   };
 }

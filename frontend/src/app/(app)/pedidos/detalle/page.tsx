@@ -26,6 +26,7 @@ import { gqlRequest } from '@/lib/graphql';
 import { formatMoney } from '@/lib/money';
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../OrderDialog';
 import { ORDER_ROW_FIELDS, PaymentChip, type OrderRow } from '../OrderCard';
+import { ItemPhoto } from '../ItemPhoto';
 import { ORDER_ITEM_FIELDS, OrderItemDialog, type OrderItem } from '../OrderItemDialog';
 import { PAYMENT_FIELDS, PaymentDialog, type Payment } from '../PaymentDialog';
 import { NO_TRIP_LABEL } from '@/lib/terms';
@@ -243,6 +244,7 @@ function OrderDetailView({ id }: { id: string }) {
             <Card key={item.id} variant="outlined">
               <CardActionArea onClick={() => setItemEditing(item)}>
                 <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                  <ItemPhoto url={item.photo_url} alt={item.name} />
                   <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
                     <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{item.name}</Typography>
                     <Typography variant="body2" color="text.secondary">
