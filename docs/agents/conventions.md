@@ -6,6 +6,8 @@ Architecture is fixed by the PRD (issue #1) and ADR-0001/0002. This file says *w
 ## Layout
 
 ```
+render.yaml               Render Blueprint for Hapi (production); deploy guide: docs/despliegue.md
+.github/workflows/        ci.yml (check + test), deploy-pages.yml (frontend → Pages), hasura-deploy.yml (→ Hasura Cloud)
 docker-compose.yml        Postgres 17 + Hasura v2.51 (cli-migrations image) + Hapi (backend/Dockerfile)
 package.json              Orchestration scripts only (no workspaces; each folder has its own lockfile)
 scripts/test-integration.sh
@@ -49,6 +51,20 @@ tests/                    integration tests against the running stack
 | One integration file | `scripts/test-integration.sh hasura/permissions.test.ts` |
 
 Both `npm run check` and `npm test` must pass before opening a PR.
+
+## Deployment (ADR-0001, `docs/despliegue.md`)
+
+- Frontend → GitHub Pages under `NEXT_PUBLIC_BASE_PATH` (`/conkora-admin-system`). Never hard-code URLs or
+  paths: Hasura/Hapi URLs come from `config` (`src/lib/config.ts`, `NEXT_PUBLIC_*` repo variables), files in
+  `public/` go through `assetPath()`, `Link`/`router` paths are written without basePath (Next adds it), and
+  `window.location` must prefix `config.basePath` (see `redirectToLogin`).
+- Hapi → Render (`render.yaml`, free plan sleeps). Calls to Hapi that a user waits on go through
+  `fetchWhileWaking` (`src/lib/wake.ts`): retries network/502–504 errors for up to 90 s while the UI says
+  "Despertando el servidor…". New backend env var: also add it to `render.yaml` (`sync: false` if secret) and
+  to the guide's table.
+- Hasura Cloud gets migrations + metadata only from `hasura-deploy.yml` on push to `main` (`hasura/**`);
+  the database URL is the env var `PG_DATABASE_URL` (`databases.yaml`). Production CORS origin is
+  `https://angelocg97.github.io` (no path) in both `CORS_ORIGIN` (Hapi) and `HASURA_GRAPHQL_CORS_DOMAIN`.
 
 ## Naming
 
@@ -175,8 +191,8 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
    ```
    Inside one `withRollback`, a failing statement aborts the transaction: put each expected error in its own test.
 4. Run: `scripts/test-integration.sh db/<view>.test.ts` locally (starts the stack, applies migrations);
-   CI must run the whole suite with the same single command, `npm test` (it brings up the docker compose
-   stack itself; the GitHub Actions workflow is pending, see PR for #5). After adding a migration to a
+   CI (`.github/workflows/ci.yml`) runs the whole suite with the same single command, `npm test` (it brings up
+   the docker compose stack itself). After adding a migration to a
    running stack, `docker compose restart hasura`.
 
 ## Backend (Hapi)

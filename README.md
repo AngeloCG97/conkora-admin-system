@@ -45,6 +45,11 @@ npm run stack:down     # detiene los contenedores (conserva los datos)
 npm run stack:reset    # borra la base de datos y vuelve a levantar todo
 ```
 
+## Desplegar
+
+GitHub Pages + Hasura Cloud + Neon + Render ([ADR-0001](docs/adr/0001-hosting-gratuito-mixto.md)):
+guía paso a paso en [`docs/despliegue.md`](docs/despliegue.md).
+
 ## Verificar
 
 ```bash
