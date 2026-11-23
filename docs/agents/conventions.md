@@ -239,6 +239,10 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`) and `trip_expense_category_summary`, exposed as `trip.summary` /
   `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
   Gasto and trip-rate mutations also invalidate `['orders']`.
+- Inicio (`(app)/page.tsx`, migration `create_no_trip_summary`): SQL view `no_trip_summary` (same columns as `trip_summary` minus `trip_id`; always one row,
+  0s when empty; Pedidos/Gastos with `trip_id IS NULL`, Cancelados excluded). The dashboard shows Saldo total (`customer_summary_aggregate` sum),
+  the last 5 Viajes with Utilidad (`trip_summary_aggregate` for the card) and the no-Viaje Ingreso/Gastos/Saldo. No global Utilidad (not approved; issue #11 open).
+  The label for "no Viaje" lives in `lib/terms.ts` (`NO_TRIP_LABEL`, currently "Personal"); rename it there once #11 is decided.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

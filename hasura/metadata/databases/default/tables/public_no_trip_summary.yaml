@@ -1,0 +1,10 @@
+# View (read-only): one row with Ingreso, cobrado, pendiente, Gastos and Utilidad in USD of what has no Viaje (Cancelados excluded; 0s when empty).
+table:
+  name: no_trip_summary
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd]
+      filter: {}
+      allow_aggregations: true
