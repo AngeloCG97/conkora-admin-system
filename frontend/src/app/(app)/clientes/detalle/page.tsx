@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { GraphQLRequestError, gqlRequest } from '@/lib/graphql';
 import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from '../../pedidos/OrderCard';
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../../pedidos/OrderDialog';
+import { AccountFigures, type AccountSummary } from '../AccountFigures';
 import { CUSTOMER_FIELDS, CustomerDialog, type Customer } from '../CustomerDialog';
 
 const CUSTOMER_QUERY = `query Customer($id: uuid!) {
@@ -29,6 +30,24 @@ const CUSTOMER_QUERY = `query Customer($id: uuid!) {
 const CUSTOMER_ORDERS_QUERY = `query CustomerOrders($id: uuid!) {
   order(where: { customer_id: { _eq: $id } }, order_by: [{ date: desc }, { created_at: desc }]) { ${ORDER_ROW_FIELDS} }
 }`;
+
+const CUSTOMER_ACCOUNT_QUERY = `query CustomerAccount($id: uuid!) {
+  customer_by_pk(id: $id) {
+    summary { order_count total_usd paid_usd balance_usd }
+    trip_summaries(order_by: [{ trip: { start_date: desc_nulls_last } }]) {
+      trip_id
+      trip { name }
+      order_count total_usd paid_usd balance_usd
+    }
+  }
+}`;
+
+interface CustomerAccount {
+  customer_by_pk: {
+    summary: AccountSummary | null;
+    trip_summaries: (AccountSummary & { trip_id: string | null; trip: { name: string } | null })[];
+  } | null;
+}
 
 const DELETE_CUSTOMER = `mutation DeleteCustomer($id: uuid!) { delete_customer_by_pk(id: $id) { id } }`;
 
@@ -49,6 +68,11 @@ function CustomerDetail({ id }: { id: string }) {
     queryKey: ['orders', 'customer', id],
     queryFn: () => gqlRequest<{ order: OrderRow[] }>(CUSTOMER_ORDERS_QUERY, { id }),
   });
+  // Under ['orders', ...] so Pedido/Abono changes refresh the account.
+  const account = useQuery({
+    queryKey: ['orders', 'customer-account', id],
+    queryFn: () => gqlRequest<CustomerAccount>(CUSTOMER_ACCOUNT_QUERY, { id }),
+  });
   const options = useQuery({
     queryKey: ['order-options'],
     queryFn: () => gqlRequest<OrderOptions>(ORDER_OPTIONS_QUERY),
@@ -61,6 +85,7 @@ function CustomerDetail({ id }: { id: string }) {
       notify.success('Cliente eliminado');
       qc.removeQueries({ queryKey: ['customer', id] });
       qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['orders'] });
       router.push('/clientes/');
     },
     onError: (e) =>
@@ -123,6 +148,33 @@ function CustomerDetail({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+
+      <Typography variant="h6" component="h2" sx={{ mt: 3, mb: 1.5 }}>
+        Cuenta (USD)
+      </Typography>
+      <Card variant="outlined">
+        <CardContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            Total de {account.data?.customer_by_pk?.summary?.order_count ?? 0} Pedidos (sin Cancelados)
+          </Typography>
+          <AccountFigures summary={account.data?.customer_by_pk?.summary ?? null} />
+        </CardContent>
+      </Card>
+      {(account.data?.customer_by_pk?.trip_summaries.length ?? 0) > 0 && (
+        <Stack spacing={1} sx={{ mt: 1.5 }}>
+          {account.data?.customer_by_pk?.trip_summaries.map((g) => (
+            <Card key={g.trip_id ?? 'personal'} variant="outlined">
+              <CardContent>
+                <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{g.trip?.name ?? 'Personal'}</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                  {g.order_count} {g.order_count === 1 ? 'Pedido' : 'Pedidos'}
+                </Typography>
+                <AccountFigures summary={g} />
+              </CardContent>
+            </Card>
+          ))}
+        </Stack>
+      )}
 
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 1.5 }}>
         <Typography variant="h6" component="h2">

@@ -1,0 +1,10 @@
+# View (read-only): Pedidos count, Total, Abono and Saldo in USD of each Cliente, Cancelados excluded.
+table:
+  name: customer_summary
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [customer_id, order_count, total_usd, paid_usd, balance_usd]
+      filter: {}
+      allow_aggregations: true

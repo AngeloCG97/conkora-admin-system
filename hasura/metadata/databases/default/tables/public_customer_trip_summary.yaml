@@ -1,0 +1,17 @@
+# View (read-only): per Cliente and Viaje (trip_id null = Personal) Pedidos count, Total, Abono and Saldo in USD, Cancelados excluded.
+table:
+  name: customer_trip_summary
+  schema: public
+object_relationships:
+  - name: trip
+    using:
+      manual_configuration:
+        remote_table: { name: trip, schema: public }
+        column_mapping: { trip_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd]
+      filter: {}
+      allow_aggregations: true

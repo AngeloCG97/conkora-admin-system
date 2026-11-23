@@ -1,7 +1,21 @@
 table:
   name: customer
   schema: public
+object_relationships:
+  - name: summary
+    using:
+      manual_configuration:
+        remote_table: { name: customer_summary, schema: public }
+        column_mapping: { id: customer_id }
+        insertion_order: null
 array_relationships:
+  - name: trip_summaries
+    using:
+      manual_configuration:
+        remote_table: { name: customer_trip_summary, schema: public }
+        column_mapping: { id: customer_id }
+        insertion_order: null
+
   - name: orders
     using:
       foreign_key_constraint_on:

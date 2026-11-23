@@ -62,6 +62,7 @@ export function CustomerDialog({ customer, onClose }: { customer?: Customer; onC
     onSuccess: () => {
       notify.success(customer ? 'Cliente actualizado' : 'Cliente creado');
       qc.invalidateQueries({ queryKey: ['customers'] });
+      qc.invalidateQueries({ queryKey: ['orders'] }); // Cliente lists/summaries live under ['orders', ...]
       qc.invalidateQueries({ queryKey: ['customer'] });
       onClose();
     },
