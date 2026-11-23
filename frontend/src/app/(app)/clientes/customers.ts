@@ -12,3 +12,10 @@ export function customerWhere(search: string): Record<string, unknown> {
   const pattern = `%${escapeLike(term)}%`;
   return { _or: [{ name: { _ilike: pattern } }, { phone: { _ilike: pattern } }] };
 }
+
+export type CustomerSort = 'name' | 'balance';
+
+/** Hasura `order_by` for the Clientes list: by name, or by Saldo (USD, highest first; name breaks ties). */
+export function customerOrderBy(sort: CustomerSort): Record<string, unknown>[] {
+  return sort === 'balance' ? [{ summary: { balance_usd: 'desc' } }, { name: 'asc' }] : [{ name: 'asc' }];
+}

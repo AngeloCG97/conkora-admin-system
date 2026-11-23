@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { customerWhere, escapeLike } from './customers';
+import { customerOrderBy, customerWhere, escapeLike } from './customers';
 
 describe('customerWhere', () => {
   it('returns no filter for blank search', () => {
@@ -18,5 +18,12 @@ describe('customerWhere', () => {
     expect(customerWhere('10%')).toEqual({
       _or: [{ name: { _ilike: '%10\\%%' } }, { phone: { _ilike: '%10\\%%' } }],
     });
+  });
+});
+
+describe('customerOrderBy', () => {
+  it('sorts by name or by Saldo descending', () => {
+    expect(customerOrderBy('name')).toEqual([{ name: 'asc' }]);
+    expect(customerOrderBy('balance')).toEqual([{ summary: { balance_usd: 'desc' } }, { name: 'asc' }]);
   });
 });

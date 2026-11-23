@@ -134,6 +134,13 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   is exact in every view. Aggregates over Pedidos (per Cliente/Viaje) should sum these per-Pedido rounded columns
   (`total_usd`, `paid_usd`, `balance_usd`, excluding `status = 'cancelled'`) so they match what each Pedido shows and stay
   consistent. Fixture: `insertPayment`. Frontend: `pedidos/PaymentDialog.tsx`, `PaymentChip`/`paymentState` (`orders.ts`).
+- Cuenta del Cliente (migration `create_customer_summaries`, USD, Cancelados excluded, sums the per-Pedido rounded columns):
+  `customer_summary` (`customer_id, order_count, total_usd, paid_usd, balance_usd`; one row per Cliente, zeros/0 when no Pedidos;
+  `customer.summary`) and `customer_trip_summary` (`customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd`; one row per
+  Cliente and Viaje with non-cancelled Pedidos, `trip_id` null = Personal; `customer.trip_summaries`, `trip.customer_summaries`,
+  `customer_trip_summary.trip`). Frontend: `clientes/AccountFigures.tsx`; account queries use keys `['orders', 'customers' | 'customer-account', ...]`
+  so Abono/Pedido mutations (which invalidate `['orders']`) refresh them; the Clientes list sorts by Saldo via
+  `order_by: { summary: { balance_usd: desc } }` (`customerOrderBy`).
 
 ## Adding a SQL view (financial calculations)
 

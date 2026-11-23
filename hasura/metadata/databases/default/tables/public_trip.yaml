@@ -17,6 +17,12 @@ array_relationships:
       foreign_key_constraint_on:
         column: trip_id
         table: { name: order, schema: public }
+  - name: customer_summaries
+    using:
+      manual_configuration:
+        remote_table: { name: customer_trip_summary, schema: public }
+        column_mapping: { id: trip_id }
+        insertion_order: null
 select_permissions:
   - role: manager
     permission:

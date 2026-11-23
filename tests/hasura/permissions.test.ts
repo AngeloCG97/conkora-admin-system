@@ -477,3 +477,50 @@ describe('payment and order_summary Abono/Saldo', () => {
     expect(left.data!.payment).toEqual([]);
   });
 });
+
+describe('customer_summary and customer_trip_summary', () => {
+  const NAME = 'Cliente de prueba cuenta';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager reads the Cliente account through customer.summary and customer.trip_summaries', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql(
+      `mutation { insert_order_one(object: {
+        customer: { data: { name: "${NAME}" } }, currency_code: "USD", date: "2026-03-01",
+        items: { data: [{ name: "Bolso", price: 100 }] }, payments: { data: [{ amount: 25, currency_code: "USD", date: "2026-03-02" }] }
+      }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const read = await graphql(
+      `{ customer(where: { name: { _eq: "${NAME}" } }) {
+        summary { order_count total_usd paid_usd balance_usd }
+        trip_summaries { trip_id trip { name } order_count total_usd paid_usd balance_usd }
+      } }`,
+      { auth },
+    );
+    expect(read.errors).toBeUndefined();
+    expect(read.data).toEqual({
+      customer: [{
+        summary: { order_count: 1, total_usd: 100, paid_usd: 25, balance_usd: 75 },
+        trip_summaries: [{ trip_id: null, trip: null, order_count: 1, total_usd: 100, paid_usd: 25, balance_usd: 75 }],
+      }],
+    });
+    const sorted = await graphql(
+      '{ customer(order_by: { summary: { balance_usd: desc } }, limit: 1) { id } }',
+      { auth },
+    );
+    expect(sorted.errors).toBeUndefined();
+  });
+
+  it('are read-only views', async () => {
+    const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
+    expect(mutations.filter((m) => /customer_summary|customer_trip_summary/.test(m))).toEqual([]);
+  });
+});

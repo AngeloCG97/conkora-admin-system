@@ -88,6 +88,11 @@ export function OrderCard({
                 ≈ {formatMoney(totalUsd, USD)} USD
               </Typography>
             )}
+            {(order.summary?.paid ?? 0) > 0 && (
+              <Typography variant="body2" color="text.secondary">
+                Abono {formatMoney(order.summary?.paid ?? 0, order.currency)}
+              </Typography>
+            )}
             {state === 'pending' && (
               <Typography variant="body2" color="warning.main">
                 Saldo {formatMoney(balance, order.currency)}
