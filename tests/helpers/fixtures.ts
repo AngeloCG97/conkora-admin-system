@@ -43,3 +43,12 @@ export async function insertExpense(
   );
   return expense.id;
 }
+
+/** Inserts a Cliente. */
+export async function insertCustomer(db: pg.PoolClient, { name = 'Cliente', phone = null as string | null } = {}) {
+  const { rows: [customer] } = await db.query<{ id: string }>(
+    'INSERT INTO customer (name, phone) VALUES ($1, $2) RETURNING id',
+    [name, phone],
+  );
+  return customer.id;
+}

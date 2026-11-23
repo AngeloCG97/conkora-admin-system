@@ -204,6 +204,9 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   `['expenses', filters]`, mutations invalidate the prefix `['expenses']`. Select options in their own
   query (`['expense-options']`). Enum columns (e.g. `category`) are GraphQL enums: pass the value as a
   string variable (`"merchandise"`), labels come from the enum table's `comment`.
+- Text search (`clientes/page.tsx`): a `TextField` in `useState`, turned into `_or` of `_ilike` by a pure helper
+  (`clientes/customers.ts` → `customerWhere`, escapes `%`/`_`); query key `['customers', where]` with
+  `placeholderData: (prev) => prev` so the list doesn't flash while typing.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

@@ -252,3 +252,47 @@ describe('expense, expense_category and expense_summary', () => {
     await asAdmin(`mutation { delete_expense(where: { trip_id: { _eq: "${id}" } }) { affected_rows } delete_trip_by_pk(id: "${id}") { id } }`);
   });
 });
+
+describe('customer', () => {
+  const NAME = 'Cliente de prueba permisos';
+
+  afterAll(async () => {
+    await asAdmin(`mutation { delete_customer(where: { name: { _like: "${NAME}%" } }) { affected_rows } }`);
+  });
+
+  it('manager does full CRUD and can search by name or phone', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql<{ insert_customer_one: { id: string } }>(
+      `mutation { insert_customer_one(object: { name: "${NAME}", phone: "8888-1234", email: "a@b.cr", notes: "n" }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const id = ins.data!.insert_customer_one.id;
+
+    const search = await graphql<{ customer: { id: string }[] }>(
+      `{ customer(where: { _or: [{ name: { _ilike: "%PRUEBA PERM%" } }, { phone: { _ilike: "%zzz%" } }] }) { id } }`,
+      { auth },
+    );
+    expect(search.data!.customer.map((c) => c.id)).toEqual([id]);
+    const byPhone = await graphql<{ customer: { id: string }[] }>(
+      `{ customer(where: { phone: { _ilike: "%1234%" }, name: { _like: "${NAME}%" } }) { id } }`,
+      { auth },
+    );
+    expect(byPhone.data!.customer).toEqual([{ id }]);
+
+    const upd = await graphql(
+      `mutation { update_customer_by_pk(pk_columns: { id: "${id}" }, _set: { phone: "7777" }) { phone } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_customer_by_pk: { phone: '7777' } });
+    const del = await graphql(`mutation { delete_customer_by_pk(id: "${id}") { id } }`, { auth });
+    expect(del.errors).toBeUndefined();
+  });
+
+  it('rejects a blank name', async () => {
+    const r = await graphql(`mutation { insert_customer_one(object: { name: "  " }) { id } }`, {
+      auth: { token: await signTestJwt() },
+    });
+    expect(r.errors?.[0]?.message).toMatch(/customer_name_check|Check constraint/i);
+  });
+});

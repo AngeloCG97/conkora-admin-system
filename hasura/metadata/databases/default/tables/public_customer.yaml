@@ -1,0 +1,24 @@
+table:
+  name: customer
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, name, phone, email, notes, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [name, phone, email, notes]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [name, phone, email, notes]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}
