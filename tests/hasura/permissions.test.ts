@@ -524,3 +524,44 @@ describe('customer_summary and customer_trip_summary', () => {
     expect(mutations.filter((m) => /customer_summary|customer_trip_summary/.test(m))).toEqual([]);
   });
 });
+
+describe('trip_summary and trip_expense_category_summary', () => {
+  const NAME = 'Viaje de prueba reporte';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_expense(where: { trip: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_trip(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager reads the Viaje report through trip.summary and trip.expense_categories', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql(
+      `mutation { insert_trip_one(object: {
+        name: "${NAME}", destination: "Panamá", start_date: "2026-03-01", end_date: "2026-03-05",
+      }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const read = await graphql(
+      `{ trip(where: { name: { _eq: "${NAME}" } }) {
+        summary { order_count income_usd collected_usd pending_usd expenses_usd profit_usd }
+        expense_categories { category total_usd }
+      } }`,
+      { auth },
+    );
+    expect(read.errors).toBeUndefined();
+    expect(read.data).toEqual({
+      trip: [{
+        summary: { order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0 },
+        expense_categories: [],
+      }],
+    });
+  });
+
+  it('are read-only views', async () => {
+    const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
+    expect(mutations.filter((m) => /trip_summary|trip_expense_category_summary/.test(m))).toEqual([]);
+  });
+});

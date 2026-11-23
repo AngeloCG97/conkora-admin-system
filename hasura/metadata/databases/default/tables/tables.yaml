@@ -12,4 +12,6 @@
 - "!include public_order_summary.yaml"
 - "!include public_payment.yaml"
 - "!include public_trip.yaml"
+- "!include public_trip_expense_category_summary.yaml"
 - "!include public_trip_rate.yaml"
+- "!include public_trip_summary.yaml"

@@ -235,6 +235,10 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   on the Cliente detail), `OrderItemDialog`, filters via `orderWhere`. Shared select options: query key `['order-options']`;
   Pedido lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
   `justifyContent`/`alignItems` inside `sx`.
+- Reporte por Viaje (`viajes/TripReport.tsx`): SQL views `trip_summary` (one row per Viaje, 0s when empty; `income_usd`, `collected_usd`,
+  `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`) and `trip_expense_category_summary`, exposed as `trip.summary` /
+  `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
+  Gasto and trip-rate mutations also invalidate `['orders']`.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

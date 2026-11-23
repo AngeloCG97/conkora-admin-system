@@ -1,0 +1,10 @@
+# View (read-only): per Viaje and category, Gastos count and total in USD.
+table:
+  name: trip_expense_category_summary
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [trip_id, category, expense_count, total_usd]
+      filter: {}
+      allow_aggregations: true
