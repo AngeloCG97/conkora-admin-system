@@ -1,5 +1,6 @@
 - "!include public_admin_user.yaml"
 - "!include public_currency.yaml"
+- "!include public_customer.yaml"
 - "!include public_expense.yaml"
 - "!include public_expense_category.yaml"
 - "!include public_expense_summary.yaml"
