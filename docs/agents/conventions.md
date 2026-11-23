@@ -266,6 +266,11 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   Σ (`trip_summary` UNION ALL `no_trip_summary`), so it always equals the sum of the reports; shown at the top of Inicio.
   The label for "no Viaje" is `NO_TRIP_LABEL` = "General" in `lib/terms.ts`: always use it, never hard-code it. "Personal" in the UI
   only ever means Gasto personal.
+- Fotos de Artículos (issue #13): `order_item.photo_url` stores only Cloudinary's `secure_url`. Hapi `POST /uploads/signature`
+  (`routes/uploads.ts`, JWT checked by hand with `jose`; 503 when `CLOUDINARY_*` are unset) returns a signed payload
+  (`cloudName, apiKey, timestamp, folder, signature`; SHA-1 in `uploads/cloudinary.ts`); the browser uploads directly to
+  Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `pedidos/ItemPhoto.tsx` (thumbnail + enlarge) and the photo
+  controls in `OrderItemDialog`.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.
