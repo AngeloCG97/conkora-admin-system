@@ -391,3 +391,89 @@ describe('order, order_item, order_status and order_summary', () => {
     expect(errorCode(delTrip)).toBe('constraint-violation');
   });
 });
+
+describe('payment and order_summary Abono/Saldo', () => {
+  const NAME = 'Cliente de prueba abonos';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  async function insertOrder(token: string) {
+    const ins = await graphql<{ insert_order_one: { id: string } }>(
+      `mutation { insert_order_one(object: {
+        customer: { data: { name: "${NAME}" } }, currency_code: "USD", date: "2026-03-01",
+        items: { data: [{ name: "Bolso", price: 100 }] }
+      }) { id } }`,
+      { auth: { token } },
+    );
+    expect(ins.errors).toBeUndefined();
+    return ins.data!.insert_order_one.id;
+  }
+
+  it('manager does CRUD on Abonos and reads Abono and Saldo through summary', async () => {
+    const token = await signTestJwt();
+    const auth = { token };
+    const orderId = await insertOrder(token);
+    const ins = await graphql<{ insert_payment_one: { id: string } }>(
+      `mutation { insert_payment_one(object: { order_id: "${orderId}", amount: 40, currency_code: "USD", date: "2026-03-02", notes: "Sinpe" }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const paymentId = ins.data!.insert_payment_one.id;
+
+    type Sel = { order_by_pk: { payments: { amount: number; notes: string }[]; summary: Record<string, number | boolean> } };
+    const read = () =>
+      graphql<Sel>(
+        `{ order_by_pk(id: "${orderId}") { payments { amount notes } summary { total paid balance total_usd paid_usd balance_usd is_paid } } }`,
+        { auth },
+      );
+    let sel = await read();
+    expect(sel.data!.order_by_pk.payments).toEqual([{ amount: 40, notes: 'Sinpe' }]);
+    expect(sel.data!.order_by_pk.summary).toEqual({
+      total: 100, paid: 40, balance: 60, total_usd: 100, paid_usd: 40, balance_usd: 60, is_paid: false,
+    });
+
+    const upd = await graphql(
+      `mutation { update_payment_by_pk(pk_columns: { id: "${paymentId}" }, _set: { amount: 100 }) { amount } }`,
+      { auth },
+    );
+    expect(upd.data).toEqual({ update_payment_by_pk: { amount: 100 } });
+    sel = await read();
+    expect(sel.data!.order_by_pk.summary).toMatchObject({ balance: 0, is_paid: true });
+
+    const del = await graphql(`mutation { delete_payment_by_pk(id: "${paymentId}") { id } }`, { auth });
+    expect(del.errors).toBeUndefined();
+    sel = await read();
+    expect(sel.data!.order_by_pk.summary).toMatchObject({ paid: 0, balance: 100 });
+  });
+
+  it('rejects an Abono of zero or negative amount', async () => {
+    const token = await signTestJwt();
+    const orderId = await insertOrder(token);
+    for (const amount of [0, -10]) {
+      const r = await graphql(
+        `mutation { insert_payment_one(object: { order_id: "${orderId}", amount: ${amount}, currency_code: "USD", date: "2026-03-02" }) { id } }`,
+        { auth: { token } },
+      );
+      expect(r.errors?.[0]?.message).toMatch(/payment_amount_check|Check constraint/i);
+    }
+  });
+
+  it('deleting a Pedido deletes its Abonos', async () => {
+    const token = await signTestJwt();
+    const orderId = await insertOrder(token);
+    const ins = await graphql(
+      `mutation { insert_payment_one(object: { order_id: "${orderId}", amount: 5, currency_code: "USD", date: "2026-03-02" }) { id } }`,
+      { auth: { token } },
+    );
+    expect(ins.errors).toBeUndefined();
+    const del = await graphql(`mutation { delete_order_by_pk(id: "${orderId}") { id } }`, { auth: { token } });
+    expect(del.errors).toBeUndefined();
+    const left = await asAdmin<{ payment: { id: string }[] }>(`{ payment(where: { order_id: { _eq: "${orderId}" } }) { id } }`);
+    expect(left.data!.payment).toEqual([]);
+  });
+});

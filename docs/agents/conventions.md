@@ -124,6 +124,16 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   per-Cliente/Viaje views must filter `status <> 'cancelled'`. `"order"` is a reserved word: always quote it in SQL
   (GraphQL: `order`, `order_by_pk`, `insert_order_one`). Statuses: enum table `order_status` (`pending, delivered, cancelled`).
   Fixtures: `insertOrder`, `insertOrderItem`.
+- Abonos: table `payment` (`order_id` CASCADE, `amount > 0`, own `currency_code`, `date`, `notes`; migration
+  `create_payment`), `order.payments`. The same migration extends `order_summary` with
+  `paid, balance, paid_usd, balance_usd, is_paid` (in the Pedido's currency / USD). Semantics:
+  `paid` = Σ Abonos converted with the **Pedido's** Viaje rates (formula above); `paid_usd` = Σ `amount / rate(Abono currency)`;
+  `balance` = Saldo = `total − paid` (negative = overpaid); `is_paid` = `total > 0 AND balance <= 0` (the "Pagado" indicator;
+  a Pedido without Artículos is neither Pagado nor pendiente). **Rounding rule**: each of `total, total_usd, paid, paid_usd` sums
+  unrounded values and is rounded once; `balance`/`balance_usd` subtract the already-rounded values, so Total − Abono = Saldo
+  is exact in every view. Aggregates over Pedidos (per Cliente/Viaje) should sum these per-Pedido rounded columns
+  (`total_usd`, `paid_usd`, `balance_usd`, excluding `status = 'cancelled'`) so they match what each Pedido shows and stay
+  consistent. Fixture: `insertPayment`. Frontend: `pedidos/PaymentDialog.tsx`, `PaymentChip`/`paymentState` (`orders.ts`).
 
 ## Adding a SQL view (financial calculations)
 
