@@ -40,7 +40,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const menu = (
     <Box component="nav" aria-label="Menú principal">
       <Toolbar sx={{ px: 2 }}>
-        <Logo height={36} />
+        <Logo height={30} />
       </Toolbar>
       <Divider />
       <List sx={{ px: 1 }}>
@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <MenuIcon />
           </IconButton>
           <Box sx={{ display: { md: 'none' } }}>
-            <Logo height={32} />
+            <Logo height={26} />
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Tooltip title="Cerrar sesión">
