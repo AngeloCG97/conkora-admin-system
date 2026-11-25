@@ -30,6 +30,7 @@ import { ORDER_ROW_FIELDS, PaymentChip, type OrderRow } from '../OrderCard';
 import { ItemPhoto } from '../ItemPhoto';
 import { ORDER_ITEM_FIELDS, OrderItemDialog, type OrderItem } from '../OrderItemDialog';
 import { PAYMENT_FIELDS, PaymentDialog, type Payment } from '../PaymentDialog';
+import { ShareOrder } from '../ShareOrder';
 import { NO_TRIP_LABEL } from '@/lib/terms';
 
 /** ₡ and $ (and, for Artículos, Pedido-currency) amounts from `order_item_summary` / `payment_summary`. */
@@ -116,6 +117,7 @@ function OrderDetailView({ id }: { id: string }) {
     onSuccess: () => {
       notify.success('Pedido eliminado');
       qc.removeQueries({ queryKey: ['order', id] });
+      qc.removeQueries({ queryKey: ['order-share', id] });
       qc.invalidateQueries({ queryKey: ['orders'] });
       router.push('/pedidos/');
     },
@@ -231,6 +233,8 @@ function OrderDetailView({ id }: { id: string }) {
           )}
         </CardContent>
       </Card>
+
+      <ShareOrder orderId={id} customerName={order.customer.name} cancelled={order.status === 'cancelled'} />
 
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
         <Typography variant="h6" component="h2">

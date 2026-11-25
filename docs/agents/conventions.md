@@ -290,6 +290,15 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   "Sin conexión…" (login refuses to start the "Despertando el servidor…" retries while `navigator.onLine` is false).
   Icons: `npm run icons` (in `frontend/`) renders `public/logo-tinta.svg` on Crema into `public/icons/*.png` with `sharp`;
   rerun it and commit the PNGs when the official logo replaces the file. Changing the policy: edit `pwa/sw-policy.mjs` + its test.
+- Enlace público del Pedido (issue #35, the **only** public page): table `order_share` (`order_id` PK → `order` CASCADE,
+  `token` = 48 hex chars from `gen_random_bytes(24)` as column default). `manager` selects/inserts (`order_id` only)/deletes;
+  regenerate = delete + insert in one mutation; revoke = delete. No anonymous role in Hasura, ever. The page
+  `app/pedido/page.tsx` (`?t=<token>`, outside `(app)/`, `noindex` + `referrer: no-referrer` in its layout) calls Hapi
+  `GET /public/orders/{token}` (`routes/public-orders.ts`): token format checked first, fixed admin-secret query, DTO built
+  field by field in `public/order-dto.ts` (never spread rows; new fields need the allowlist in both test files updated),
+  identical 404 for invalid/unknown/revoked/Cancelado, `Cache-Control: no-store`, CORS = `CORS_ORIGIN`, in-memory token
+  bucket per IP (30/min; IP = X-Forwarded-For entry `TRUSTED_PROXY_HOPS` from the right, `1` on Render and in compose).
+  Share button: `pedidos/ShareOrder.tsx` + `lib/share.ts` (`shareUrl`, `shareLink`: Web Share → clipboard fallback).
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.
