@@ -40,10 +40,15 @@ export default function LoginPage() {
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!navigator.onLine) {
+      // Offline is not "server asleep": don't start the wake-up retries.
+      setError('Sin conexión: conéctate a internet para iniciar sesión.');
+      return;
+    }
     setSubmitting(true);
-    const slowTimer = setTimeout(() => setSlow(true), SLOW_LOGIN_MS);
+    const slowTimer = setTimeout(() => navigator.onLine && setSlow(true), SLOW_LOGIN_MS);
     try {
-      await login(username.trim(), password, { onWaking: () => setSlow(true) });
+      await login(username.trim(), password, { onWaking: () => navigator.onLine && setSlow(true) });
       router.replace('/');
     } catch (err) {
       setError(err instanceof LoginError ? err.message : 'Ocurrió un error inesperado.');

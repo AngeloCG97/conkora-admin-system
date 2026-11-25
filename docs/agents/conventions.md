@@ -281,6 +281,15 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   (`cloudName, apiKey, timestamp, folder, signature`; SHA-1 in `uploads/cloudinary.ts`); the browser uploads directly to
   Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `pedidos/ItemPhoto.tsx` (thumbnail + enlarge) and the photo
   controls in `OrderItemDialog`.
+- PWA (issue #34): hand-written service worker, no plugin. `frontend/pwa/` holds the manifest builder (`manifest.mjs`), the
+  tested caching policy (`sw-policy.mjs`, `routeRequest` → `'cache' | 'network-only'`) and `sw.template.js`; the `postbuild`
+  script `scripts/build-pwa.mjs` writes `out/manifest.webmanifest` and `out/sw.js` (policy inlined, precache list and cache
+  name `conkora-<hash of out/>`, all prefixed with `NEXT_PUBLIC_BASE_PATH`). Only same-origin GETs under the basePath without
+  `Authorization` are cached; Hasura/Hapi/Cloudinary are never cached. `components/pwa/PwaUpdater` registers the worker
+  (production only) and shows "Hay una versión nueva" → `SKIP_WAITING` + reload; `OfflineBanner` + `lib/connectivity.ts` show
+  "Sin conexión…" (login refuses to start the "Despertando el servidor…" retries while `navigator.onLine` is false).
+  Icons: `npm run icons` (in `frontend/`) renders `public/logo-tinta.svg` on Crema into `public/icons/*.png` with `sharp`;
+  rerun it and commit the PNGs when the official logo replaces the file. Changing the policy: edit `pwa/sw-policy.mjs` + its test.
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

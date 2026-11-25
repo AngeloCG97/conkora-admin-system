@@ -1,5 +1,6 @@
 import { redirectToLogin } from './auth';
 import { config } from './config';
+import { reportNetworkFailure, reportNetworkSuccess } from './connectivity';
 import { getSession } from './session';
 
 interface GraphQLErrorPayload {
@@ -42,11 +43,18 @@ export async function gqlRequest<TData, TVariables extends Record<string, unknow
     throw new GraphQLRequestError([{ message: 'Sesión expirada', extensions: { code: 'invalid-jwt' } }]);
   }
 
-  const response = await fetch(config.hasuraUrl, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${session.token}` },
-    body: JSON.stringify({ query, variables }),
-  });
+  let response: Response;
+  try {
+    response = await fetch(config.hasuraUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${session.token}` },
+      body: JSON.stringify({ query, variables }),
+    });
+  } catch (error) {
+    reportNetworkFailure(); // no response at all: shows the "Sin conexión" banner
+    throw error;
+  }
+  reportNetworkSuccess();
 
   if (response.status === 401) {
     redirectToLogin();
