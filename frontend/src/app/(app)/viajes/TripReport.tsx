@@ -9,11 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { Loading } from '@/components/feedback/Loading';
 import { gqlRequest } from '@/lib/graphql';
-import { formatMoney } from '@/lib/money';
-
-const USD = { code: 'USD', symbol: '$' };
-
-export const money = (n: number) => formatMoney(n, USD);
+import { DualAmount } from '@/components/money/DualAmount';
 
 export interface TripSummary {
   order_count: number;
@@ -25,18 +21,34 @@ export interface TripSummary {
   /** Subtotals of `expenses_usd`: Gastos personales and Gastos del negocio. */
   personal_expenses_usd: number;
   business_expenses_usd: number;
+  /** ₡ equivalents of each figure (Σ of the per-record ₡, each with its Viaje's rate). */
+  income_crc: number;
+  collected_crc: number;
+  pending_crc: number;
+  expenses_crc: number;
+  profit_crc: number;
+  personal_expenses_crc: number;
+  business_expenses_crc: number;
 }
+
+/** GraphQL selection of every TripSummary field. */
+export const TRIP_SUMMARY_FIELDS = `order_count income_usd collected_usd pending_usd expenses_usd profit_usd
+      personal_expenses_usd business_expenses_usd
+      income_crc collected_crc pending_crc expenses_crc profit_crc personal_expenses_crc business_expenses_crc`;
 
 interface TripReportData {
   trip_by_pk: {
     summary: TripSummary | null;
-    expense_categories: { category: string; expense_count: number; total_usd: number }[];
+    expense_categories: { category: string; expense_count: number; total_usd: number; total_crc: number }[];
     customer_summaries: {
       customer_id: string;
       order_count: number;
       total_usd: number;
       paid_usd: number;
       balance_usd: number;
+      total_crc: number;
+      paid_crc: number;
+      balance_crc: number;
       customer: { name: string };
     }[];
   } | null;
@@ -46,11 +58,11 @@ interface TripReportData {
 const REPORT_QUERY = `query TripReport($id: uuid!) {
   trip_by_pk(id: $id) {
     summary {
-      order_count income_usd collected_usd pending_usd expenses_usd profit_usd personal_expenses_usd business_expenses_usd
+      ${TRIP_SUMMARY_FIELDS}
     }
-    expense_categories(order_by: [{ total_usd: desc }]) { category expense_count total_usd }
+    expense_categories(order_by: [{ total_usd: desc }]) { category expense_count total_usd total_crc }
     customer_summaries(order_by: [{ total_usd: desc }]) {
-      customer_id order_count total_usd paid_usd balance_usd customer { name }
+      customer_id order_count total_usd paid_usd balance_usd total_crc paid_crc balance_crc customer { name }
     }
   }
   expense_category { value comment }
@@ -59,16 +71,27 @@ const REPORT_QUERY = `query TripReport($id: uuid!) {
 /** Profit coloring: negative = error, otherwise success. */
 export const profitColor = (n: number) => (n < 0 ? 'error.main' : 'success.main');
 
-function Figure({ label, value, color }: { label: string; value: number; color?: string }) {
+/** Report figure card: the USD amount and, below, its ₡ equivalent (both from the SQL views). */
+export function Figure({
+  label,
+  usd,
+  crc,
+  color,
+  minWidth = 140,
+}: {
+  label: string;
+  usd: number;
+  crc: number;
+  color?: string;
+  minWidth?: number;
+}) {
   return (
-    <Card variant="outlined" sx={{ flex: '1 1 140px' }}>
+    <Card variant="outlined" sx={{ flex: `1 1 ${minWidth}px` }}>
       <CardContent sx={{ '&:last-child': { pb: 2 } }}>
         <Typography variant="body2" color="text.secondary">
           {label}
         </Typography>
-        <Typography variant="h6" component="p" sx={{ fontWeight: 700, color }}>
-          {money(value)}
-        </Typography>
+        <DualAmount usd={usd} crc={crc} variant="h6" fontWeight={700} color={color} />
       </CardContent>
     </Card>
   );
@@ -89,20 +112,20 @@ export function TripReport({ tripId }: { tripId: string }) {
   return (
     <>
       <Typography variant="h6" component="h2" sx={{ mb: 1.5 }}>
-        Reporte (USD)
+        Reporte ($ y ₡)
       </Typography>
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
-        <Figure label={`Ingreso (${s.order_count} Pedidos)`} value={s.income_usd} />
-        <Figure label="Gastos" value={s.expenses_usd} />
-        <Figure label="Utilidad" value={s.profit_usd} color={profitColor(s.profit_usd)} />
+        <Figure label={`Ingreso (${s.order_count} Pedidos)`} usd={s.income_usd} crc={s.income_crc} />
+        <Figure label="Gastos" usd={s.expenses_usd} crc={s.expenses_crc} />
+        <Figure label="Utilidad" usd={s.profit_usd} crc={s.profit_crc} color={profitColor(s.profit_usd)} />
       </Stack>
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
-        <Figure label="Gastos del negocio" value={s.business_expenses_usd} />
-        <Figure label="Gastos personales" value={s.personal_expenses_usd} />
+        <Figure label="Gastos del negocio" usd={s.business_expenses_usd} crc={s.business_expenses_crc} />
+        <Figure label="Gastos personales" usd={s.personal_expenses_usd} crc={s.personal_expenses_crc} />
       </Stack>
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
-        <Figure label="Cobrado" value={s.collected_usd} />
-        <Figure label="Pendiente por cobrar" value={s.pending_usd} />
+        <Figure label="Cobrado" usd={s.collected_usd} crc={s.collected_crc} />
+        <Figure label="Pendiente por cobrar" usd={s.pending_usd} crc={s.pending_crc} />
       </Stack>
 
       <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
@@ -117,14 +140,14 @@ export function TripReport({ tripId }: { tripId: string }) {
           <CardContent sx={{ '&:last-child': { pb: 2 } }}>
             <Stack spacing={1}>
               {report.expense_categories.map((c) => (
-                <Stack key={c.category} direction="row" sx={{ justifyContent: 'space-between' }}>
+                <Stack key={c.category} direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <Typography>
                     {label.get(c.category) ?? c.category}{' '}
                     <Typography component="span" variant="body2" color="text.secondary">
                       ({c.expense_count})
                     </Typography>
                   </Typography>
-                  <Typography sx={{ fontWeight: 600 }}>{money(c.total_usd)}</Typography>
+                  <DualAmount usd={c.total_usd} crc={c.total_crc} align="right" sx={{ flexShrink: 0 }} />
                 </Stack>
               ))}
             </Stack>
@@ -147,11 +170,9 @@ export function TripReport({ tripId }: { tripId: string }) {
                 <CardContent sx={{ '&:last-child': { pb: 2 } }}>
                   <Typography sx={{ fontWeight: 600 }}>{c.customer.name}</Typography>
                   <Stack direction="row" useFlexGap spacing={2} sx={{ flexWrap: 'wrap' }}>
-                    <Typography variant="body2">Total {money(c.total_usd)}</Typography>
-                    <Typography variant="body2">Abono {money(c.paid_usd)}</Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      Saldo {money(c.balance_usd)}
-                    </Typography>
+                    <DualAmount label="Total" usd={c.total_usd} crc={c.total_crc} variant="body2" fontWeight={400} />
+                    <DualAmount label="Abono" usd={c.paid_usd} crc={c.paid_crc} variant="body2" fontWeight={400} />
+                    <DualAmount label="Saldo" usd={c.balance_usd} crc={c.balance_crc} variant="body2" />
                   </Stack>
                 </CardContent>
               </CardActionArea>

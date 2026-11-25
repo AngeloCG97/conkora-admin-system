@@ -16,7 +16,7 @@ import { Loading } from '@/components/feedback/Loading';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDate } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
-import { formatMoney } from '@/lib/money';
+import { DualAmount } from '@/components/money/DualAmount';
 import { EXPENSE_FIELDS, ExpenseDialog, type Expense, type ExpenseOptions } from './ExpenseDialog';
 import { expenseWhere, type ExpenseFilters, type TripFilter } from './expenses';
 import { NO_TRIP_LABEL } from '@/lib/terms';
@@ -24,15 +24,13 @@ import { NO_TRIP_LABEL } from '@/lib/terms';
 type ExpenseRow = Expense & {
   currency: { code: string; symbol: string };
   trip: { name: string } | null;
-  summary: { amount_usd: number } | null;
+  summary: { amount_usd: number; amount_crc: number } | null;
 };
 
 interface ExpensesData {
   expense: ExpenseRow[];
-  expense_summary_aggregate: { aggregate: { sum: { amount_usd: number | null } } | null };
+  expense_summary_aggregate: { aggregate: { sum: { amount_usd: number | null; amount_crc: number | null } } | null };
 }
-
-const USD = { code: 'USD', symbol: '$' };
 
 const OPTIONS_QUERY = `query ExpenseOptions {
   trip(order_by: [{ start_date: desc }]) { id name }
@@ -45,9 +43,9 @@ const EXPENSES_QUERY = `query Expenses($where: expense_bool_exp!, $summaryWhere:
     ${EXPENSE_FIELDS}
     currency { code symbol }
     trip { name }
-    summary { amount_usd }
+    summary { amount_usd amount_crc }
   }
-  expense_summary_aggregate(where: $summaryWhere) { aggregate { sum { amount_usd } } }
+  expense_summary_aggregate(where: $summaryWhere) { aggregate { sum { amount_usd amount_crc } } }
 }`;
 
 /** Select value <-> TripFilter. */
@@ -81,7 +79,7 @@ export default function ExpensesPage() {
   });
 
   const categoryLabel = new Map(options.data?.expense_category.map((c) => [c.value, c.comment]));
-  const totalUsd = expenses.data?.expense_summary_aggregate.aggregate?.sum.amount_usd ?? 0;
+  const total = expenses.data?.expense_summary_aggregate.aggregate?.sum;
 
   return (
     <>
@@ -151,12 +149,12 @@ export default function ExpensesPage() {
         <Typography color="text.secondary">No hay Gastos con estos filtros.</Typography>
       ) : (
         <>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            {expenses.data?.expense.length} Gastos · Total{' '}
-            <Typography component="span" variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
-              {formatMoney(totalUsd, USD)} USD
+          <Stack direction="row" spacing={0.75} sx={{ mb: 1.5, alignItems: 'baseline' }}>
+            <Typography variant="body2" color="text.secondary">
+              {expenses.data?.expense.length} Gastos · Total
             </Typography>
-          </Typography>
+            <DualAmount usd={total?.amount_usd ?? 0} crc={total?.amount_crc ?? 0} variant="body2" />
+          </Stack>
           <Stack spacing={1.5}>
             {expenses.data?.expense.map((e) => (
               <Card key={e.id} variant="outlined">
@@ -172,14 +170,14 @@ export default function ExpensesPage() {
                         {e.is_personal && <Chip size="small" color="secondary" variant="outlined" label="Gasto personal" />}
                       </Stack>
                     </Stack>
-                    <Stack spacing={0.5} sx={{ textAlign: 'right', flexShrink: 0 }}>
-                      <Typography sx={{ fontWeight: 600 }}>{formatMoney(e.amount, e.currency)}</Typography>
-                      {e.currency_code !== USD.code && (
-                        <Typography variant="body2" color="text.secondary">
-                          ≈ {formatMoney(e.summary?.amount_usd ?? 0, USD)} USD
-                        </Typography>
-                      )}
-                    </Stack>
+                    <DualAmount
+                      amount={e.amount}
+                      currency={e.currency}
+                      usd={e.summary?.amount_usd ?? 0}
+                      crc={e.summary?.amount_crc ?? 0}
+                      align="right"
+                      sx={{ flexShrink: 0 }}
+                    />
                   </CardContent>
                 </CardActionArea>
               </Card>

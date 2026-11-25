@@ -7,7 +7,7 @@ import {
 describe('customer_summary and customer_trip_summary', () => {
   it('Cliente sin Pedidos tiene totales en 0 y cantidad 0, sin filas por Viaje', () => withRollback(async (db) => {
     const customerId = await insertCustomer(db);
-    const { rows } = await db.query('SELECT * FROM customer_summary WHERE customer_id = $1', [customerId]);
+    const { rows } = await db.query('SELECT customer_id, order_count, total_usd, paid_usd, balance_usd FROM customer_summary WHERE customer_id = $1', [customerId]);
     expect(rows).toEqual([{ customer_id: customerId, order_count: 0, total_usd: 0, paid_usd: 0, balance_usd: 0 }]);
     const byTrip = await db.query('SELECT * FROM customer_trip_summary WHERE customer_id = $1', [customerId]);
     expect(byTrip.rows).toEqual([]);
@@ -37,7 +37,7 @@ describe('customer_summary and customer_trip_summary', () => {
     const y = await insertOrder(db, { customerId, status: 'cancelled' });
     await insertOrderItem(db, { orderId: y, price: 777 });
 
-    const { rows: [total] } = await db.query('SELECT * FROM customer_summary WHERE customer_id = $1', [customerId]);
+    const { rows: [total] } = await db.query('SELECT customer_id, order_count, total_usd, paid_usd, balance_usd FROM customer_summary WHERE customer_id = $1', [customerId]);
     expect(total).toEqual({ customer_id: customerId, order_count: 3, total_usd: 210, paid_usd: 80, balance_usd: 130 });
 
     const { rows } = await db.query(

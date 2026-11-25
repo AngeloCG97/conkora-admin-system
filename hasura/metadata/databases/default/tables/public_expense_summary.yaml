@@ -1,4 +1,4 @@
-# View (read-only): effective exchange rate and USD equivalent of each Gasto.
+# View (read-only): effective exchange rate and USD and CRC equivalents of each Gasto.
 table:
   name: expense_summary
   schema: public
@@ -12,6 +12,6 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [expense_id, trip_id, category, currency_code, rate, amount_usd, is_personal]
+      columns: [expense_id, trip_id, category, currency_code, rate, amount_usd, is_personal, amount_crc]
       filter: {}
       allow_aggregations: true

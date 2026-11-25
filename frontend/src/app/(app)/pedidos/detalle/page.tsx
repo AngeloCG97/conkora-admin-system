@@ -23,6 +23,7 @@ import { Loading } from '@/components/feedback/Loading';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDate } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
+import { DualAmount } from '@/components/money/DualAmount';
 import { formatMoney } from '@/lib/money';
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../OrderDialog';
 import { ORDER_ROW_FIELDS, PaymentChip, type OrderRow } from '../OrderCard';
@@ -31,15 +32,16 @@ import { ORDER_ITEM_FIELDS, OrderItemDialog, type OrderItem } from '../OrderItem
 import { PAYMENT_FIELDS, PaymentDialog, type Payment } from '../PaymentDialog';
 import { NO_TRIP_LABEL } from '@/lib/terms';
 
-type OrderDetail = OrderRow & { items: OrderItem[]; payments: Payment[] };
-
-const USD = { code: 'USD', symbol: '$' };
+/** ₡ and $ (and, for Artículos, Pedido-currency) amounts from `order_item_summary` / `payment_summary`. */
+type ItemRow = OrderItem & { summary: { line_total: number; line_total_usd: number; line_total_crc: number } | null };
+type PaymentRow = Payment & { summary: { amount_usd: number; amount_crc: number } | null };
+type OrderDetail = OrderRow & { items: ItemRow[]; payments: PaymentRow[] };
 
 const ORDER_QUERY = `query Order($id: uuid!) {
   order_by_pk(id: $id) {
     ${ORDER_ROW_FIELDS}
-    items(order_by: [{ created_at: asc }]) { ${ORDER_ITEM_FIELDS} }
-    payments(order_by: [{ date: desc }, { created_at: desc }]) { ${PAYMENT_FIELDS} }
+    items(order_by: [{ created_at: asc }]) { ${ORDER_ITEM_FIELDS} summary { line_total line_total_usd line_total_crc } }
+    payments(order_by: [{ date: desc }, { created_at: desc }]) { ${PAYMENT_FIELDS} summary { amount_usd amount_crc } }
   }
 }`;
 
@@ -49,33 +51,34 @@ const UPDATE_STATUS = `mutation UpdateOrderStatus($id: uuid!, $status: order_sta
 
 const DELETE_ORDER = `mutation DeleteOrder($id: uuid!) { delete_order_by_pk(id: $id) { id } }`;
 
-/** One line of the Total / Abono / Saldo block: amount in the Pedido's currency, plus USD when it differs. */
+/** One line of the Total / Abono / Saldo block: amount in the Pedido's currency, then its ₡ / $ equivalents. */
 function AmountLine({
   label,
   amount,
-  amountUsd,
+  usd,
+  crc,
   currency,
   strong = false,
 }: {
   label: string;
   amount: number;
-  amountUsd: number;
+  usd: number;
+  crc: number;
   currency: { code: string; symbol: string };
   strong?: boolean;
 }) {
   return (
     <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
       <Typography color="text.secondary">{label}</Typography>
-      <Stack sx={{ textAlign: 'right' }}>
-        <Typography variant={strong ? 'h6' : 'body1'} sx={{ fontWeight: strong ? 700 : 500 }}>
-          {formatMoney(amount, currency)}
-        </Typography>
-        {currency.code !== USD.code && (
-          <Typography variant="body2" color="text.secondary">
-            ≈ {formatMoney(amountUsd, USD)} USD
-          </Typography>
-        )}
-      </Stack>
+      <DualAmount
+        amount={amount}
+        currency={currency}
+        usd={usd}
+        crc={crc}
+        variant={strong ? 'h6' : 'body1'}
+        fontWeight={strong ? 700 : 500}
+        align="right"
+      />
     </Stack>
   );
 }
@@ -207,12 +210,13 @@ function OrderDetailView({ id }: { id: string }) {
           </TextField>
           <Divider sx={{ mb: 1.5 }} />
           <Stack spacing={1}>
-            <AmountLine label="Total" amount={s?.total ?? 0} amountUsd={s?.total_usd ?? 0} currency={order.currency} />
-            <AmountLine label="Abono" amount={s?.paid ?? 0} amountUsd={s?.paid_usd ?? 0} currency={order.currency} />
+            <AmountLine label="Total" amount={s?.total ?? 0} usd={s?.total_usd ?? 0} crc={s?.total_crc ?? 0} currency={order.currency} />
+            <AmountLine label="Abono" amount={s?.paid ?? 0} usd={s?.paid_usd ?? 0} crc={s?.paid_crc ?? 0} currency={order.currency} />
             <AmountLine
               label="Saldo"
               amount={s?.balance ?? 0}
-              amountUsd={s?.balance_usd ?? 0}
+              usd={s?.balance_usd ?? 0}
+              crc={s?.balance_crc ?? 0}
               currency={order.currency}
               strong
             />
@@ -252,6 +256,14 @@ function OrderDetailView({ id }: { id: string }) {
                       {item.size ? ` · Talla ${item.size}` : ''}
                     </Typography>
                   </Stack>
+                  <DualAmount
+                    amount={item.summary?.line_total ?? 0}
+                    currency={order.currency}
+                    usd={item.summary?.line_total_usd ?? 0}
+                    crc={item.summary?.line_total_crc ?? 0}
+                    align="right"
+                    sx={{ flexShrink: 0 }}
+                  />
                 </CardContent>
               </CardActionArea>
             </Card>
@@ -285,7 +297,14 @@ function OrderDetailView({ id }: { id: string }) {
                       </Typography>
                     )}
                   </Stack>
-                  <Typography sx={{ fontWeight: 600, flexShrink: 0 }}>{formatMoney(payment.amount, payment.currency)}</Typography>
+                  <DualAmount
+                    amount={payment.amount}
+                    currency={payment.currency}
+                    usd={payment.summary?.amount_usd ?? 0}
+                    crc={payment.summary?.amount_crc ?? 0}
+                    align="right"
+                    sx={{ flexShrink: 0 }}
+                  />
                 </CardContent>
               </CardActionArea>
             </Card>

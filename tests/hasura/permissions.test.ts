@@ -625,3 +625,85 @@ describe('business_summary', () => {
     expect(mutations.filter((m) => /business_summary/.test(m))).toEqual([]);
   });
 });
+
+describe('CRC equivalents (*_crc), order_item_summary and payment_summary', () => {
+  const NAME = 'Cliente de prueba colones';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager reads ₡ and $ of Pedidos, Artículos, Abonos and the Cliente account', async () => {
+    const auth = { token: await signTestJwt() };
+    const ins = await graphql(
+      `mutation { insert_order_one(object: {
+        customer: { data: { name: "${NAME}" } }, currency_code: "CRC", date: "2026-03-01",
+        items: { data: [{ name: "Bolso", price: 5000, quantity: 2 }] },
+        payments: { data: [{ amount: 2500, currency_code: "CRC", date: "2026-03-02" }] }
+      }) { id } }`,
+      { auth },
+    );
+    expect(ins.errors).toBeUndefined();
+    const read = await graphql<{ customer: Record<string, unknown>[] }>(
+      `{ customer(where: { name: { _eq: "${NAME}" } }) {
+        summary { total_crc paid_crc balance_crc }
+        trip_summaries { total_crc paid_crc balance_crc }
+        orders {
+          summary { total_crc paid_crc balance_crc }
+          items { summary { currency_code line_total line_total_crc line_total_usd order_item { name } } }
+          payments { summary { currency_code order_currency_code order_amount amount_crc amount_usd payment { amount } } }
+        }
+      } }`,
+      { auth },
+    );
+    expect(read.errors).toBeUndefined();
+    const [customer] = read.data!.customer as {
+      summary: unknown; trip_summaries: unknown[];
+      orders: { summary: unknown; items: { summary: Record<string, unknown> }[]; payments: { summary: Record<string, unknown> }[] }[];
+    }[];
+    expect(customer.summary).toEqual({ total_crc: 10000, paid_crc: 2500, balance_crc: 7500 });
+    expect(customer.trip_summaries).toEqual([{ total_crc: 10000, paid_crc: 2500, balance_crc: 7500 }]);
+    const [order] = customer.orders;
+    expect(order.summary).toEqual({ total_crc: 10000, paid_crc: 2500, balance_crc: 7500 });
+    expect(order.items[0].summary).toMatchObject({ currency_code: 'CRC', line_total: 10000, line_total_crc: 10000, order_item: { name: 'Bolso' } });
+    expect(order.items[0].summary.line_total_usd).toBeGreaterThan(0);
+    expect(order.payments[0].summary).toMatchObject({
+      currency_code: 'CRC', order_currency_code: 'CRC', order_amount: 2500, amount_crc: 2500, payment: { amount: 2500 },
+    });
+    expect(order.payments[0].summary.amount_usd).toBeGreaterThan(0);
+  });
+
+  it('manager reads the ₡ columns of every report view', async () => {
+    const read = await graphql(
+      `{
+        expense_summary(limit: 1) { amount_crc }
+        trip_summary(limit: 1) { income_crc collected_crc pending_crc expenses_crc profit_crc personal_expenses_crc business_expenses_crc }
+        trip_expense_category_summary(limit: 1) { total_crc }
+        no_trip_summary { income_crc collected_crc pending_crc expenses_crc profit_crc personal_expenses_crc business_expenses_crc }
+        business_summary { income_crc collected_crc pending_crc expenses_crc profit_crc personal_expenses_crc business_expenses_crc }
+        customer_summary_aggregate { aggregate { sum { balance_crc } } }
+      }`,
+      { auth: { token: await signTestJwt() } },
+    );
+    expect(read.errors).toBeUndefined();
+  });
+
+  it('the new views and columns are read-only', async () => {
+    const token = await signTestJwt();
+    const mutations = await rootFieldNames(token, 'mutationType');
+    expect(mutations.filter((m) => /order_item_summary|payment_summary/.test(m))).toEqual([]);
+    const upd = await graphql(
+      `mutation { update_order_summary(where: {}, _set: { total_crc: 1 }) { affected_rows } }`,
+      { auth: { token } },
+    );
+    expect(upd.errors?.[0]?.extensions?.code).toBe('validation-failed');
+    const updExpense = await graphql(
+      `mutation { update_expense(where: { id: { _is_null: true } }, _set: { amount_crc: 1 }) { affected_rows } }`,
+      { auth: { token } },
+    );
+    expect(updExpense.errors?.[0]?.extensions?.code).toBe('validation-failed');
+  });
+});

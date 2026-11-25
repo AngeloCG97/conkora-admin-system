@@ -162,6 +162,16 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   so Abono/Pedido mutations (which invalidate `['orders']`) refresh them; the Clientes list sorts by Saldo via
   `order_by: { summary: { balance_usd: desc } }` (`customerOrderBy`).
 
+- Montos en ₡ y $ (issue #30, migration `dual_currency_amounts`): every view with `*_usd` also has `*_crc` (appended at the end),
+  converted with `to_crc(trip_id, amount, currency)` = `amount / effective_rate(trip, currency) × effective_rate(trip, 'CRC')`
+  (a CRC amount stays as is; Abonos use the Pedido's Viaje; `COALESCE(..., 0)` so it is never null, even without CRC). Same
+  rounding as USD: per-row `round(x, 2)`, aggregates sum the per-Pedido/Gasto rounded `*_crc`. Per-record views:
+  `expense_summary.amount_crc`, `order_summary.total_crc/paid_crc/balance_crc`, `order_item_summary` (`order_item.summary`:
+  `line_total, line_total_usd, line_total_crc`) and `payment_summary` (`payment.summary`: `rate, order_currency_code,
+  order_amount, amount_usd, amount_crc`). Frontend: `components/money/DualAmount.tsx` shows the official amount in its currency
+  and, muted below, its equivalents (`lib/money.ts` → `equivalentAmounts`/`formatEquivalents`: ₡ → $, $ → ₡, other → ₡ and $);
+  for reports/totals pass only `usd` + `crc`. Every money display uses it (or `Figure`/`AccountFigures`, which wrap it).
+
 ## Adding a SQL view (financial calculations)
 
 1. `CREATE VIEW` in a new migration (`down.sql`: `DROP VIEW`), converting with `effective_rate` as above.

@@ -5,7 +5,7 @@ import {
 } from '../helpers/fixtures.ts';
 
 type Db = Parameters<Parameters<typeof withRollback>[0]>[0];
-const summary = async (db: Db) => (await db.query('SELECT * FROM no_trip_summary')).rows;
+const summary = async (db: Db) => (await db.query('SELECT order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd, personal_expenses_usd, business_expenses_usd FROM no_trip_summary')).rows;
 
 describe('no_trip_summary', () => {
   it('always returns exactly one row with numbers, never null', () => withRollback(async (db) => {

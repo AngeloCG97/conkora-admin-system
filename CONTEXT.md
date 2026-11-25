@@ -42,7 +42,7 @@ Suma de los precios de los Artículos de un Pedido (o de varios Pedidos, según 
 Total menos Abonos. Lo que el Cliente todavía debe.
 
 **Moneda base**
-Dólar (USD). Todos los reportes (Ingreso, Utilidad, Saldo del Cliente) se expresan en ella. También se usan colones (CRC) y pueden agregarse otras.
+Dólar (USD). Todos los reportes (Ingreso, Utilidad, Saldo del Cliente) se expresan en ella y, además, en colones (CRC): el equivalente en ₡ de un total es la suma de los ₡ de cada registro, cada uno con el tipo de cambio de su Viaje. Cada monto registrado se muestra primero en su moneda y luego su equivalente en ₡ y/o $. Pueden agregarse otras monedas.
 
 **Tipo de cambio del Viaje**
 Unidades de cada moneda por 1 USD, fijadas por Viaje. Todo lo que pertenece al Viaje (Gastos, Pedidos, Abonos) se convierte con ese tipo.

@@ -15,7 +15,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDateRange } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { TRIP_FIELDS, TripDialog, type Trip } from './TripDialog';
-import { money, profitColor, type TripSummary } from './TripReport';
+import { DualAmount } from '@/components/money/DualAmount';
+import { profitColor, type TripSummary } from './TripReport';
 
 const TRIPS_QUERY = `query Trips {
   trip(order_by: [{ start_date: desc }]) { ${TRIP_FIELDS} }
@@ -23,10 +24,21 @@ const TRIPS_QUERY = `query Trips {
 
 // Separate query under ['orders', ...] so Pedido/Abono/Gasto changes refresh the figures.
 const SUMMARIES_QUERY = `query TripSummaries {
-  trip { id summary { income_usd expenses_usd profit_usd } }
+  trip { id summary { income_usd expenses_usd profit_usd income_crc expenses_crc profit_crc } }
 }`;
 
-type ListSummary = Pick<TripSummary, 'income_usd' | 'expenses_usd' | 'profit_usd'>;
+type ListSummary = Pick<TripSummary, 'income_usd' | 'expenses_usd' | 'profit_usd' | 'income_crc' | 'expenses_crc' | 'profit_crc'>;
+
+/** Ingreso / Gastos / Utilidad of a Viaje card, in $ and ₡ (from `trip_summary`). */
+function TripFigures({ summary: s }: { summary: ListSummary }) {
+  return (
+    <Stack direction="row" useFlexGap spacing={2} sx={{ flexWrap: 'wrap', mt: 0.5 }}>
+      <DualAmount label="Ingreso" usd={s.income_usd} crc={s.income_crc} variant="body2" fontWeight={400} />
+      <DualAmount label="Gastos" usd={s.expenses_usd} crc={s.expenses_crc} variant="body2" fontWeight={400} />
+      <DualAmount label="Utilidad" usd={s.profit_usd} crc={s.profit_crc} variant="body2" color={profitColor(s.profit_usd)} />
+    </Stack>
+  );
+}
 
 export default function TripsPage() {
   const [creating, setCreating] = useState(false);
@@ -65,15 +77,7 @@ export default function TripsPage() {
                   <Typography variant="body2" color="text.secondary">
                     {t.destination} · {formatDateRange(t.start_date, t.end_date)}
                   </Typography>
-                  {summaryById.get(t.id) && (
-                    <Stack direction="row" useFlexGap spacing={2} sx={{ flexWrap: 'wrap', mt: 0.5 }}>
-                      <Typography variant="body2">Ingreso {money(summaryById.get(t.id)!.income_usd)}</Typography>
-                      <Typography variant="body2">Gastos {money(summaryById.get(t.id)!.expenses_usd)}</Typography>
-                      <Typography variant="body2" sx={{ fontWeight: 600, color: profitColor(summaryById.get(t.id)!.profit_usd) }}>
-                        Utilidad {money(summaryById.get(t.id)!.profit_usd)}
-                      </Typography>
-                    </Stack>
-                  )}
+                  {summaryById.get(t.id) && <TripFigures summary={summaryById.get(t.id)!} />}
                 </CardContent>
               </CardActionArea>
             </Card>

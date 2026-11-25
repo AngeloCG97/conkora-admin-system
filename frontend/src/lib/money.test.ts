@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney } from './money';
-
-const USD = { code: 'USD', symbol: '$' };
-const CRC = { code: 'CRC', symbol: '₡' };
+import { CRC, USD, equivalentAmounts, formatEquivalents, formatMoney } from './money';
 
 describe('formatMoney', () => {
   it('formats USD with comma thousands and two decimals', () => {
@@ -23,5 +20,27 @@ describe('formatMoney', () => {
   it('puts the sign before the symbol', () => {
     expect(formatMoney(-1250, USD)).toBe('-$1,250.00');
     expect(formatMoney(-0.001, USD)).toBe('$0.00');
+  });
+});
+
+describe('equivalentAmounts / formatEquivalents (DualAmount)', () => {
+  const eq = { usd: 50, crc: 26000 };
+
+  it('an amount in ₡ shows its $ equivalent', () => {
+    expect(equivalentAmounts('CRC', eq)).toEqual([{ amount: 50, currency: USD }]);
+    expect(formatEquivalents('CRC', eq)).toBe('≈ $50.00');
+  });
+
+  it('an amount in $ shows its ₡ equivalent', () => {
+    expect(equivalentAmounts('USD', eq)).toEqual([{ amount: 26000, currency: CRC }]);
+    expect(formatEquivalents('USD', eq)).toBe('≈ ₡26.000');
+  });
+
+  it('an amount in another currency shows ₡ and $', () => {
+    expect(formatEquivalents('EUR', eq)).toBe('≈ ₡26.000 · $50.00');
+  });
+
+  it('keeps negative values (e.g. Utilidad, Saldo a favor)', () => {
+    expect(formatEquivalents('USD', { usd: -10, crc: -5200 })).toBe('≈ -₡5.200');
   });
 });

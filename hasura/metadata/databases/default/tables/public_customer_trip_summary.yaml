@@ -1,4 +1,4 @@
-# View (read-only): per Cliente and Viaje (trip_id null = Personal) Pedidos count, Total, Abono and Saldo in USD, Cancelados excluded.
+# View (read-only): per Cliente and Viaje (trip_id null = Personal) Pedidos count, Total, Abono and Saldo in USD and CRC, Cancelados excluded.
 table:
   name: customer_trip_summary
   schema: public
@@ -18,6 +18,6 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd]
+      columns: [customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd, total_crc, paid_crc, balance_crc]
       filter: {}
       allow_aggregations: true

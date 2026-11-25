@@ -6,7 +6,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import Link from 'next/link';
 import { formatDate } from '@/lib/dates';
-import { formatMoney } from '@/lib/money';
+import { DualAmount } from '@/components/money/DualAmount';
 import { ORDER_FIELDS, type Order } from './OrderDialog';
 import { paymentState } from './orders';
 import { NO_TRIP_LABEL } from '@/lib/terms';
@@ -20,6 +20,9 @@ export interface OrderSummary {
   balance: number;
   balance_usd: number;
   is_paid: boolean;
+  total_crc: number;
+  paid_crc: number;
+  balance_crc: number;
 }
 
 /** A Pedido row with what the lists show (Cliente, Viaje, moneda and Total/Abono/Saldo from `order_summary`). */
@@ -34,9 +37,7 @@ export const ORDER_ROW_FIELDS = `${ORDER_FIELDS}
   customer { name }
   trip { name }
   currency { code symbol }
-  summary { total total_usd paid paid_usd balance balance_usd is_paid }`;
-
-const USD = { code: 'USD', symbol: '$' };
+  summary { total total_usd paid paid_usd balance balance_usd is_paid total_crc paid_crc balance_crc }`;
 
 /** "Pagado" / "Saldo pendiente" chip derived from the Saldo (nothing for Cancelados or empty Pedidos). */
 export function PaymentChip({ status, summary }: { status: string; summary: OrderSummary | null }) {
@@ -59,9 +60,7 @@ export function OrderCard({
   statusLabel: string;
   showCustomer?: boolean;
 }) {
-  const total = order.summary?.total ?? 0;
-  const totalUsd = order.summary?.total_usd ?? 0;
-  const balance = order.summary?.balance ?? 0;
+  const s = order.summary;
   const state = paymentState(order.status, order.summary);
   return (
     <Card variant="outlined">
@@ -83,21 +82,30 @@ export function OrderCard({
             </Stack>
           </Stack>
           <Stack spacing={0.5} sx={{ textAlign: 'right', flexShrink: 0 }}>
-            <Typography sx={{ fontWeight: 600 }}>{formatMoney(total, order.currency)}</Typography>
-            {order.currency_code !== USD.code && (
-              <Typography variant="body2" color="text.secondary">
-                ≈ {formatMoney(totalUsd, USD)} USD
-              </Typography>
-            )}
-            {(order.summary?.paid ?? 0) > 0 && (
-              <Typography variant="body2" color="text.secondary">
-                Abono {formatMoney(order.summary?.paid ?? 0, order.currency)}
-              </Typography>
+            <DualAmount amount={s?.total ?? 0} currency={order.currency} usd={s?.total_usd ?? 0} crc={s?.total_crc ?? 0} />
+            {(s?.paid ?? 0) > 0 && (
+              <DualAmount
+                label="Abono"
+                amount={s?.paid ?? 0}
+                currency={order.currency}
+                usd={s?.paid_usd ?? 0}
+                crc={s?.paid_crc ?? 0}
+                variant="body2"
+                fontWeight={400}
+                color="text.secondary"
+              />
             )}
             {state === 'pending' && (
-              <Typography variant="body2" color="warning.main">
-                Saldo {formatMoney(balance, order.currency)}
-              </Typography>
+              <DualAmount
+                label="Saldo"
+                amount={s?.balance ?? 0}
+                currency={order.currency}
+                usd={s?.balance_usd ?? 0}
+                crc={s?.balance_crc ?? 0}
+                variant="body2"
+                fontWeight={400}
+                color="warning.main"
+              />
             )}
           </Stack>
         </CardContent>
