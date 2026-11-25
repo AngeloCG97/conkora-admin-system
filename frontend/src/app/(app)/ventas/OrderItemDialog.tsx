@@ -1,6 +1,5 @@
 'use client';
 
-import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -11,13 +10,12 @@ import TextField from '@mui/material/TextField';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import { useTheme } from '@mui/material/styles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useConfirm, useNotify } from '@/components/feedback/FeedbackProvider';
 import { gqlRequest } from '@/lib/graphql';
-import { PhotoUploadError, uploadPhoto } from '@/lib/photos';
 import { parseAmount } from '../gastos/expenses';
-import { ItemPhoto } from './ItemPhoto';
 import { parseQuantity } from './orders';
+import { PhotoPicker } from './PhotoPicker';
 
 export interface OrderItem {
   id: string;
@@ -25,10 +23,11 @@ export interface OrderItem {
   price: number;
   quantity: number;
   size: string | null;
+  description: string | null;
   photo_url: string | null;
 }
 
-export const ORDER_ITEM_FIELDS = 'id name price quantity size photo_url';
+export const ORDER_ITEM_FIELDS = 'id name price quantity size description photo_url';
 
 const INSERT_ITEM = `mutation InsertOrderItem($object: order_item_insert_input!) {
   insert_order_item_one(object: $object) { id }
@@ -65,10 +64,9 @@ export function OrderItemDialog({
   const [price, setPrice] = useState(item ? String(item.price) : '');
   const [quantity, setQuantity] = useState(item ? String(item.quantity) : '1');
   const [size, setSize] = useState(item?.size ?? '');
+  const [description, setDescription] = useState(item?.description ?? '');
   const [photoUrl, setPhotoUrl] = useState<string | null>(item?.photo_url ?? null);
   const [uploading, setUploading] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const fileInput = useRef<HTMLInputElement>(null);
   const [touched, setTouched] = useState(false);
 
   const priceValue = parseAmount(price);
@@ -84,7 +82,14 @@ export function OrderItemDialog({
 
   const save = useMutation({
     mutationFn: () => {
-      const fields = { name: name.trim(), price: priceValue, quantity: quantityValue, size: size.trim() || null, photo_url: photoUrl };
+      const fields = {
+        name: name.trim(),
+        price: priceValue,
+        quantity: quantityValue,
+        size: size.trim() || null,
+        description: description.trim() || null,
+        photo_url: photoUrl,
+      };
       return item
         ? gqlRequest(UPDATE_ITEM, { id: item.id, set: fields })
         : gqlRequest(INSERT_ITEM, { object: { ...fields, order_id: orderId } });
@@ -98,20 +103,6 @@ export function OrderItemDialog({
     onSuccess: () => done('Artículo eliminado'),
     onError: () => notify.error('No se pudo eliminar el Artículo'),
   });
-
-  const onFile = async (file: File | undefined) => {
-    if (!file) return;
-    setPhotoError(null);
-    setUploading(true);
-    try {
-      setPhotoUrl(await uploadPhoto(file));
-    } catch (e) {
-      setPhotoError(e instanceof PhotoUploadError ? e.message : 'No se pudo subir la foto');
-    } finally {
-      setUploading(false);
-      if (fileInput.current) fileInput.current.value = '';
-    }
-  };
 
   const submit = () => {
     setTouched(true);
@@ -158,25 +149,14 @@ export function OrderItemDialog({
             />
           </Stack>
           <TextField label="Talla (opcional)" value={size} onChange={(e) => setSize(e.target.value)} />
-          <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <ItemPhoto url={photoUrl} alt={name || 'Foto del Artículo'} size={80} />
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/*"
-              hidden
-              onChange={(e) => onFile(e.target.files?.[0])}
-            />
-            <Button variant="outlined" onClick={() => fileInput.current?.click()} disabled={uploading}>
-              {uploading ? 'Subiendo…' : photoUrl ? 'Cambiar foto' : 'Agregar foto'}
-            </Button>
-            {photoUrl && !uploading && (
-              <Button color="error" onClick={() => setPhotoUrl(null)}>
-                Quitar foto
-              </Button>
-            )}
-          </Stack>
-          {photoError && <Alert severity="error">{photoError}</Alert>}
+          <TextField
+            label="Descripción (opcional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            multiline
+            minRows={2}
+          />
+          <PhotoPicker url={photoUrl} alt={name} onChange={setPhotoUrl} onUploadingChange={setUploading} />
         </Stack>
       </DialogContent>
       <DialogActions>

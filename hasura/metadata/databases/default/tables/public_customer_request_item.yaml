@@ -1,0 +1,28 @@
+table:
+  name: customer_request_item
+  schema: public
+object_relationships:
+  - name: request
+    using:
+      foreign_key_constraint_on: request_id
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, request_id, name, size, description, photo_url, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [request_id, name, size, description, photo_url]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [name, size, description, photo_url]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}

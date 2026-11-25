@@ -92,7 +92,7 @@ function CustomerDetail({ id }: { id: string }) {
     onError: (e) =>
       notify.error(
         e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-          ? 'No se puede eliminar: el Cliente tiene Ventas'
+          ? 'No se puede eliminar: el Cliente tiene Ventas o Pedidos'
           : 'No se pudo eliminar',
       ),
   });

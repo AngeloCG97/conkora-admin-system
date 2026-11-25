@@ -8,18 +8,26 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Snackbar from '@mui/material/Snackbar';
+import Link from 'next/link';
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 
 /**
  * App-wide feedback:
  *   const notify = useNotify();   notify.success('Viaje guardado'); notify.error('No se pudo guardar');
+ *                                 notify.success('Artículo movido', { label: 'Ver Venta', href: '/ventas/detalle/?id=…' });
  *   const confirm = useConfirm(); if (await confirm({ title: '¿Eliminar el Viaje?', danger: true })) { ... }
  */
 
 type Severity = 'success' | 'error' | 'info' | 'warning';
 
+/** Optional link button inside the toast (`href` without basePath, as for `Link`). */
+export interface NotifyAction {
+  label: string;
+  href: string;
+}
+
 interface Notify {
-  success(message: string): void;
+  success(message: string, action?: NotifyAction): void;
   error(message: string): void;
   info(message: string): void;
 }
@@ -39,17 +47,17 @@ const NotifyContext = createContext<Notify | null>(null);
 const ConfirmContext = createContext<Confirm | null>(null);
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<{ key: number; message: string; severity: Severity } | null>(null);
+  const [toast, setToast] = useState<{ key: number; message: string; severity: Severity; action?: NotifyAction } | null>(null);
   const [dialog, setDialog] = useState<ConfirmOptions | null>(null);
   const resolveRef = useRef<((value: boolean) => void) | null>(null);
 
-  const show = useCallback((severity: Severity, message: string) => {
-    setToast({ key: Date.now(), message, severity });
+  const show = useCallback((severity: Severity, message: string, action?: NotifyAction) => {
+    setToast({ key: Date.now(), message, severity, action });
   }, []);
 
   const notify = useMemo<Notify>(
     () => ({
-      success: (message) => show('success', message),
+      success: (message, action) => show('success', message, action),
       error: (message) => show('error', message),
       info: (message) => show('info', message),
     }),
@@ -78,7 +86,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
         <Snackbar
           key={toast?.key}
           open={toast !== null}
-          autoHideDuration={toast?.severity === 'error' ? 8000 : 4000}
+          autoHideDuration={toast?.severity === 'error' || toast?.action ? 8000 : 4000}
           onClose={(_event, reason) => reason !== 'clickaway' && setToast(null)}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
@@ -86,7 +94,14 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             onClose={() => setToast(null)}
             severity={toast?.severity ?? 'info'}
             variant="filled"
-            sx={{ width: '100%' }}
+            sx={{ width: '100%', alignItems: 'center' }}
+            action={
+              toast?.action && (
+                <Button component={Link} href={toast.action.href} color="inherit" size="small" onClick={() => setToast(null)}>
+                  {toast.action.label}
+                </Button>
+              )
+            }
           >
             {toast?.message}
           </Alert>

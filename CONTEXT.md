@@ -28,8 +28,12 @@ Compra de un Cliente, compuesta por Artículos, en una sola moneda. Pertenece a 
 _Evitar_: pedido (nombre anterior en la interfaz, renombrado a Venta; las rutas son /ventas/ y la página pública /venta/; el código y las tablas conservan el nombre `order`), orden, compra (como sustantivo del modelo).
 
 **Artículo**
-Línea de una Venta: nombre, precio, y opcionalmente foto y talla.
+Línea de una Venta: nombre, precio, y opcionalmente foto, talla y descripción. Un Pedido también tiene Artículos, pero sin precio.
 _Evitar_: producto, ítem.
+
+**Pedido**
+Lo que un Cliente nos pide que le busquemos: una lista de Artículos (nombre y opcionalmente talla, descripción y foto, sin precio). Pertenece a un Cliente y a un Viaje o es General, como una Venta. Cuando encontramos un Artículo se **mueve a una Venta** con su precio: va a la Venta Pendiente más reciente del mismo Cliente y Viaje (o General) o, si no hay, a una Venta nueva en colones (₡); entonces sale del Pedido. Un Pedido sin Artículos queda vacío, no se borra solo. No cuenta en Total, Ingreso ni Saldo.
+_Evitar_: solicitud, encargo. Ojo: hasta noviembre de 2026 "Pedido" era el nombre de la Venta en la interfaz; en el código se llama `customer_request` (la Venta sigue siendo `order`).
 
 **Abono**
 Pago parcial o total que un Cliente hace sobre una Venta concreta. Puede venir en una moneda distinta a la de la Venta; para el Saldo se convierte a la moneda de la Venta.
@@ -63,4 +67,5 @@ Utilidad de todo el negocio: Ingreso menos Gastos de todos los Viajes más lo Ge
 
 - Un **Viaje** tiene muchos **Gastos** y muchas **Ventas**; lo que no tiene Viaje es **General**.
 - Un **Cliente** tiene muchas **Ventas**; una **Venta** tiene muchos **Artículos** y muchos **Abonos**.
+- Un **Cliente** tiene muchos **Pedidos**; un **Pedido** tiene muchos **Artículos**, que se mueven uno a uno a una **Venta** del mismo Viaje (o General).
 - Saldo del Cliente = suma de los Saldos de sus Ventas.

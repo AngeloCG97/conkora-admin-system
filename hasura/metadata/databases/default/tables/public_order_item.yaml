@@ -14,20 +14,20 @@ object_relationships:
 select_permissions:
   - role: manager
     permission:
-      columns: [id, order_id, name, price, quantity, size, photo_url, created_at]
+      columns: [id, order_id, name, price, quantity, size, description, photo_url, created_at]
       filter: {}
       allow_aggregations: true
 insert_permissions:
   - role: manager
     permission:
       check: {}
-      columns: [order_id, name, price, quantity, size, photo_url]
+      columns: [order_id, name, price, quantity, size, description, photo_url]
 update_permissions:
   - role: manager
     permission:
       filter: {}
       check: {}
-      columns: [name, price, quantity, size, photo_url]
+      columns: [name, price, quantity, size, description, photo_url]
 delete_permissions:
   - role: manager
     permission:

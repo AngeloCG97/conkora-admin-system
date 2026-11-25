@@ -2,3 +2,7 @@
   configuration: { exposed_as: query }
   permissions:
     - role: manager
+- function: { name: move_request_item_to_order, schema: public }
+  configuration: { exposed_as: mutation }
+  permissions:
+    - role: manager

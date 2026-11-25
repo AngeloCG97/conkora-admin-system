@@ -69,9 +69,10 @@ Both `npm run check` and `npm test` must pass before opening a PR.
 ## Naming
 
 - DB/GraphQL/code identifiers in English, singular snake_case tables as in the PRD schema
-  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`).
-- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Venta, Artículo, Abono, Saldo…):
-  `/viajes/`, `/gastos/`, `/clientes/`, `/ventas/`, `/reportes/`, `/monedas/`.
+  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`, `customer_request`, `customer_request_item`).
+  Code names don't follow the UI renames: `order` = Venta, `customer_request` = Pedido (see `CONTEXT.md`).
+- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Pedido, Venta, Artículo, Abono, Saldo…):
+  `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/ventas/`, `/reportes/`, `/monedas/`.
 
 ## Adding a table (migration + metadata + permissions)
 
@@ -172,6 +173,28 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   and, muted below, its equivalents (`lib/money.ts` → `equivalentAmounts`/`formatEquivalents`: ₡ → $, $ → ₡, other → ₡ and $);
   for reports/totals pass only `usd` + `crc`. Every money display uses it (or `Figure`/`AccountFigures`, which wrap it).
 
+## Adding a multi-step write (Hasura-tracked mutation function)
+
+When one user action must change several rows atomically (e.g. "Mover a Venta"), write a Postgres function instead of a
+Hapi endpoint: Hasura runs each mutation in one transaction, so the function is all-or-nothing and needs no backend deploy.
+Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEFAULT NULL) RETURNS SETOF "order"`
+(migration `move_request_item_to_order`).
+
+1. `CREATE FUNCTION ... RETURNS SETOF public.<tracked table> LANGUAGE plpgsql VOLATILE` in a new migration (`down.sql`:
+   `DROP FUNCTION` with its argument types). Qualify parameters that share a column name (`move_request_item_to_order.price`).
+2. Track it in `hasura/metadata/databases/default/functions/functions.yaml` with `configuration: { exposed_as: mutation }`
+   and `permissions: [{ role: manager }]`. GraphQL: `move_request_item_to_order(args: { item_id, price, today }) { id }`.
+3. User-facing errors: `RAISE EXCEPTION '<Spanish message>' USING ERRCODE = 'invalid_parameter_value'` (22023). Hasura
+   returns it as `extensions.code = 'data-exception'` **with the message**; plain `RAISE EXCEPTION` (P0001) comes back as
+   `unexpected` / "database query error" and the message is lost for `manager`.
+4. Concurrency: lock what you read (`SELECT ... FOR UPDATE`) and, when the function may *create* a row others could also
+   create, take `pg_advisory_xact_lock(hashtextextended('<function>:<key>', 0))` before looking for it (READ COMMITTED: the
+   next statement sees what the lock holder committed).
+5. Relationships selected on the returned rows are read in the same statement snapshot, so they do **not** see rows the
+   function inserted: return the id and refetch (invalidate the query keys).
+6. Tests: `tests/db/<name>.test.ts` (logic, `withRollback`; concurrency with two `pg.Client`s on committed rows cleaned up in
+   `afterAll`) and a case in `tests/hasura/permissions.test.ts` (manager can call it, error code/message, no JWT rejected).
+
 ## Adding a SQL view (financial calculations)
 
 1. `CREATE VIEW` in a new migration (`down.sql`: `DROP VIEW`), converting with `effective_rate` as above.
@@ -236,7 +259,7 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
     mutationFn: (id: string) => gqlRequest(DELETE_TRIP, { id }),
     onSuccess: () => { notify.success('Viaje eliminado'); qc.invalidateQueries({ queryKey: ['trips'] }); },
     onError: (e) => notify.error(e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-      ? 'No se puede eliminar: el Viaje tiene Gastos o Ventas' : 'No se pudo eliminar'),
+      ? 'No se puede eliminar: el Viaje tiene Gastos, Ventas o Pedidos' : 'No se pudo eliminar'),
   });
   // if (await confirm({ title: '¿Eliminar el Viaje?', confirmText: 'Eliminar', danger: true })) remove.mutate(id);
   ```
@@ -262,9 +285,19 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   `placeholderData: (prev) => prev` so the list doesn't flash while typing.
 - Ventas (`ventas/`): `OrderDialog` (create/edit; a new Venta navigates to its detail; `fixedCustomerId` locks the
   Cliente, `defaultCustomerId`/`defaultTripId` only preselect), `OrderCard` + `ORDER_ROW_FIELDS` (shared list row, also used
-  on the Cliente detail), `OrderItemDialog`, filters via `orderWhere`. Shared select options: query key `['order-options']`;
+  on the Cliente detail), `OrderItemDialog` (also edits `order_item.description`, shown in the Venta detail but not on the
+  public page: `public/order-dto.ts` does not include it), filters via `orderWhere`. Shared select options: query key `['order-options']`;
   Venta lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
   `justifyContent`/`alignItems` inside `sx`.
+- Pedidos (`pedidos/`, tables `customer_request` + `customer_request_item`, migration `create_customer_request`): what a Cliente
+  asks us to find. `RequestDialog` (create/edit, reuses `['order-options']`), `RequestItemDialog` (name, talla, descripción,
+  photo; no price), filters via `requestWhere` (= `orderWhere` without Estado). Keys: list `['requests', where]`, detail
+  `['request', id]`. "Mover a Venta" = `MoveToOrderDialog` → SQL function `move_request_item_to_order` (section above): asks
+  only the price, previews the target with `moveTargetWhere` (key `['orders', 'move-target', ...]`), passes `today = todayIso()`
+  (the browser's date, not the server's UTC), then invalidates `['request', id]`, `['requests']`, `['orders']`, `['order']`
+  and notifies with a link (`notify.success(message, { label, href })`). Target rule: most recent (`date`, then `created_at`)
+  Pendiente Venta of the same Cliente and `trip_id IS NOT DISTINCT FROM` the Pedido's; none → new Pendiente Venta in CRC.
+  The Artículo is copied with quantity 1 (name, size, description, photo_url) and deleted from the Pedido.
 - Reporte por Viaje (`viajes/TripReport.tsx`): SQL views `trip_summary` (one row per Viaje, 0s when empty; `income_usd`, `collected_usd`,
   `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`, `personal_expenses_usd`, `business_expenses_usd`) and `trip_expense_category_summary`, exposed as `trip.summary` /
   `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
@@ -279,8 +312,9 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Fotos de Artículos (issue #13): `order_item.photo_url` stores only Cloudinary's `secure_url`. Hapi `POST /uploads/signature`
   (`routes/uploads.ts`, JWT checked by hand with `jose`; 503 when `CLOUDINARY_*` are unset) returns a signed payload
   (`cloudName, apiKey, timestamp, folder, signature`; SHA-1 in `uploads/cloudinary.ts`); the browser uploads directly to
-  Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `ventas/ItemPhoto.tsx` (thumbnail + enlarge) and the photo
-  controls in `OrderItemDialog`.
+  Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `ventas/ItemPhoto.tsx` (thumbnail + enlarge) and
+  `ventas/PhotoPicker.tsx` (add/change/remove, used by `OrderItemDialog` and `RequestItemDialog`). Pedido Artículos use the same
+  signature and folder; `customer_request_item.photo_url` moves to `order_item.photo_url` as is.
 - PWA (issue #34): hand-written service worker, no plugin. `frontend/pwa/` holds the manifest builder (`manifest.mjs`), the
   tested caching policy (`sw-policy.mjs`, `routeRequest` → `'cache' | 'network-only'`) and `sw.template.js`; the `postbuild`
   script `scripts/build-pwa.mjs` writes `out/manifest.webmanifest` and `out/sw.js` (policy inlined, precache list and cache

@@ -259,6 +259,11 @@ function OrderDetailView({ id }: { id: string }) {
                       {item.quantity} × {formatMoney(item.price, order.currency)}
                       {item.size ? ` · Talla ${item.size}` : ''}
                     </Typography>
+                    {item.description && (
+                      <Typography variant="body2" sx={{ overflowWrap: 'anywhere', whiteSpace: 'pre-wrap' }}>
+                        {item.description}
+                      </Typography>
+                    )}
                   </Stack>
                   <DualAmount
                     amount={item.summary?.line_total ?? 0}
