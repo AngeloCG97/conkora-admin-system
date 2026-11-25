@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { asAdmin, graphql, rootFieldNames, signTestJwt, typeNames } from '../helpers/hasura.ts';
+import { asAdmin, asManager, graphql, rootFieldNames, signTestJwt, typeNames } from '../helpers/hasura.ts';
 
 /**
  * Hasura permissions for the `manager` role (PRD, "Capa GraphQL de Hasura").
@@ -705,5 +705,32 @@ describe('CRC equivalents (*_crc), order_item_summary and payment_summary', () =
       { auth: { token } },
     );
     expect(updExpense.errors?.[0]?.extensions?.code).toBe('validation-failed');
+  });
+});
+
+describe('similar_customers', () => {
+  const QUERY = `query ($name: String!) { similar_customers(args: { search_name: $name }) { id name phone } }`;
+  let id: string | undefined;
+
+  afterAll(async () => {
+    if (id) await asAdmin(`mutation { delete_customer_by_pk(id: "${id}") { id } }`);
+  });
+
+  it('manager finds a similar Cliente', async () => {
+    const created = await asAdmin<{ insert_customer_one: { id: string } }>(
+      `mutation { insert_customer_one(object: { name: "Zulema Quirós Pruebas", phone: "8888" }) { id } }`,
+    );
+    id = created.data!.insert_customer_one.id;
+    const result = await asManager<{ similar_customers: { id: string; phone: string }[] }>(QUERY, {
+      name: 'zulema quiros  pruebas',
+    });
+    expect(result.errors).toBeUndefined();
+    expect(result.data!.similar_customers.map((c) => c.id)).toContain(id);
+  });
+
+  it('rejects a request without a JWT', async () => {
+    const result = await graphql(QUERY, { auth: { none: true }, variables: { name: 'x' } });
+    expect(result.data).toBeUndefined();
+    expect(errorCode(result)).toBe('invalid-headers');
   });
 });
