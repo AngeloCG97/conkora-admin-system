@@ -1,0 +1,4 @@
+- function: { name: similar_customers, schema: public }
+  configuration: { exposed_as: query }
+  permissions:
+    - role: manager
