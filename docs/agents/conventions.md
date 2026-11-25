@@ -322,8 +322,8 @@ Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEF
   `Authorization` are cached; Hasura/Hapi/Cloudinary are never cached. `components/pwa/PwaUpdater` registers the worker
   (production only) and shows "Hay una versión nueva" → `SKIP_WAITING` + reload; `OfflineBanner` + `lib/connectivity.ts` show
   "Sin conexión…" (login refuses to start the "Despertando el servidor…" retries while `navigator.onLine` is false).
-  Icons: `npm run icons` (in `frontend/`) renders `public/logo-tinta.svg` on Crema into `public/icons/*.png` with `sharp`;
-  rerun it and commit the PNGs when the official logo replaces the file. Changing the policy: edit `pwa/sw-policy.mjs` + its test.
+  Icons: `npm run icons` (in `frontend/`) renders `public/icon-corazon*.svg` (the logo heart on Crema; maskable and filled-favicon variants) into
+  `public/icons/*.png` with `sharp`; rerun it and commit the PNGs when the sources change. Changing the policy: edit `pwa/sw-policy.mjs` + its test.
 - Enlace público de la Venta (issue #35, the **only** public page): table `order_share` (`order_id` PK → `order` CASCADE,
   `token` = 48 hex chars from `gen_random_bytes(24)` as column default). `manager` selects/inserts (`order_id` only)/deletes;
   regenerate = delete + insert in one mutation; revoke = delete. No anonymous role in Hasura, ever. The page

@@ -28,7 +28,13 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   // basePath is not added to these URLs by Next (only to file-convention icons).
   manifest: `${config.basePath}/manifest.webmanifest`,
-  icons: { apple: [{ url: `${config.basePath}/icons/apple-touch-icon.png`, sizes: '180x180' }] },
+  icons: {
+    icon: [
+      { url: `${config.basePath}/icons/favicon-32.png`, sizes: '32x32', type: 'image/png' },
+      { url: `${config.basePath}/icons/favicon-16.png`, sizes: '16x16', type: 'image/png' },
+    ],
+    apple: [{ url: `${config.basePath}/icons/apple-touch-icon.png`, sizes: '180x180' }],
+  },
   // Next only emits the standard mobile-web-app-capable; older iOS still reads the apple- one.
   other: { 'apple-mobile-web-app-capable': 'yes' },
   appleWebApp: { capable: true, title: 'ConKora', statusBarStyle: 'default' },
