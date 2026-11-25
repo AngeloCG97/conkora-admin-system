@@ -2,34 +2,51 @@
 
 import AddIcon from '@mui/icons-material/Add';
 import Button from '@mui/material/Button';
+import Card from '@mui/material/Card';
+import CardActionArea from '@mui/material/CardActionArea';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Loading } from '@/components/feedback/Loading';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { formatDate } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
-import type { TripFilter } from '../gastos/expenses';
-import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from './OrderDialog';
-import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from './OrderCard';
-import { orderWhere, type OrderFilters } from './orders';
 import { NO_TRIP_LABEL } from '@/lib/terms';
+import type { TripFilter } from '../gastos/expenses';
+import { ORDER_OPTIONS_QUERY, type OrderOptions } from '../ventas/OrderDialog';
+import { REQUEST_FIELDS, RequestDialog, type CustomerRequest } from './RequestDialog';
+import { itemCountLabel, requestWhere, type RequestFilters } from './requests';
 
-const ORDERS_QUERY = `query Orders($where: order_bool_exp!) {
-  order(where: $where, order_by: [{ date: desc }, { created_at: desc }]) { ${ORDER_ROW_FIELDS} }
+type RequestRow = CustomerRequest & {
+  customer: { name: string };
+  trip: { name: string } | null;
+  items_aggregate: { aggregate: { count: number } | null };
+};
+
+const REQUESTS_QUERY = `query Requests($where: customer_request_bool_exp!) {
+  customer_request(where: $where, order_by: [{ date: desc }, { created_at: desc }]) {
+    ${REQUEST_FIELDS}
+    customer { name }
+    trip { name }
+    items_aggregate { aggregate { count } }
+  }
 }`;
 
-/** Select value <-> TripFilter. */
+/** Select value <-> TripFilter (same as the Ventas list). */
 const ALL = '__all';
 const GENERAL = '__general';
 const tripFilterValue = (f: TripFilter) => (f.kind === 'all' ? ALL : f.kind === 'general' ? GENERAL : f.id);
 const toTripFilter = (value: string): TripFilter =>
   value === ALL ? { kind: 'all' } : value === GENERAL ? { kind: 'general' } : { kind: 'trip', id: value };
 
-export default function OrdersPage() {
-  const [filters, setFilters] = useState<OrderFilters>({ trip: { kind: 'all' }, customerId: null, status: null });
+export default function RequestsPage() {
+  const [filters, setFilters] = useState<RequestFilters>({ trip: { kind: 'all' }, customerId: null });
   const [creating, setCreating] = useState(false);
 
   const options = useQuery({
@@ -37,25 +54,26 @@ export default function OrdersPage() {
     queryFn: () => gqlRequest<OrderOptions>(ORDER_OPTIONS_QUERY),
   });
 
-  const where = orderWhere(filters);
-  const orders = useQuery({
-    queryKey: ['orders', where],
-    queryFn: () => gqlRequest<{ order: OrderRow[] }>(ORDERS_QUERY, { where }),
+  const where = requestWhere(filters);
+  const requests = useQuery({
+    queryKey: ['requests', where],
+    queryFn: () => gqlRequest<{ customer_request: RequestRow[] }>(REQUESTS_QUERY, { where }),
     placeholderData: (prev) => prev,
   });
-
-  const statusLabel = new Map(options.data?.order_status.map((s) => [s.value, s.comment]));
 
   return (
     <>
       <PageHeader
-        title="Ventas"
+        title="Pedidos"
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} disabled={!options.data}>
-            Nueva Venta
+            Nuevo Pedido
           </Button>
         }
       />
+      <Typography color="text.secondary" sx={{ mb: 2, mt: -1 }}>
+        Lo que los Clientes nos piden buscar. Al encontrar un Artículo, muévelo a una Venta.
+      </Typography>
 
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ mb: 2 }}>
         <TextField
@@ -89,37 +107,48 @@ export default function OrdersPage() {
             </MenuItem>
           ))}
         </TextField>
-        <TextField
-          select
-          size="small"
-          label="Estado"
-          value={filters.status ?? ALL}
-          onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value === ALL ? null : e.target.value }))}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value={ALL}>Todos</MenuItem>
-          {options.data?.order_status.map((s) => (
-            <MenuItem key={s.value} value={s.value}>
-              {s.comment}
-            </MenuItem>
-          ))}
-        </TextField>
       </Stack>
 
-      {orders.isPending ? (
+      {requests.isPending ? (
         <Loading />
-      ) : orders.data?.order.length === 0 ? (
-        <Typography color="text.secondary">No hay Ventas con estos filtros.</Typography>
+      ) : requests.data?.customer_request.length === 0 ? (
+        <Typography color="text.secondary">No hay Pedidos con estos filtros.</Typography>
       ) : (
         <Stack spacing={1.5}>
-          {orders.data?.order.map((o) => (
-            <OrderCard key={o.id} order={o} statusLabel={statusLabel.get(o.status) ?? o.status} />
-          ))}
+          {requests.data?.customer_request.map((r) => {
+            const count = r.items_aggregate.aggregate?.count ?? 0;
+            return (
+              <Card key={r.id} variant="outlined">
+                <CardActionArea component={Link} href={`/pedidos/detalle/?id=${r.id}`}>
+                  <CardContent sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+                    <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{r.customer.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(r.date)} · {r.trip?.name ?? NO_TRIP_LABEL}
+                      </Typography>
+                      {r.notes && (
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {r.notes}
+                        </Typography>
+                      )}
+                    </Stack>
+                    <Chip
+                      size="small"
+                      label={itemCountLabel(count)}
+                      color={count > 0 ? 'secondary' : 'default'}
+                      variant={count > 0 ? 'filled' : 'outlined'}
+                      sx={{ flexShrink: 0 }}
+                    />
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            );
+          })}
         </Stack>
       )}
 
       {creating && options.data && (
-        <OrderDialog
+        <RequestDialog
           key="new"
           options={options.data}
           defaultCustomerId={filters.customerId ?? undefined}

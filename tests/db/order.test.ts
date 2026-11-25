@@ -8,7 +8,7 @@ async function summary(db: pg.PoolClient, orderId: string) {
   return rows[0] as { rate: number; total: number; total_usd: number };
 }
 
-describe('order_summary (Total of each Pedido)', () => {
+describe('order_summary (Total of each Venta)', () => {
   it('sums price × quantity over several Artículos', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
@@ -18,7 +18,7 @@ describe('order_summary (Total of each Pedido)', () => {
       expect(await summary(db, orderId)).toEqual({ rate: 1, total: 81, total_usd: 81 });
     }));
 
-  it('a Pedido without Artículos has Total 0, not null', () =>
+  it('a Venta without Artículos has Total 0, not null', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db), currency: 'CRC' });
       const s = await summary(db, orderId);
@@ -36,7 +36,7 @@ describe('order_summary (Total of each Pedido)', () => {
       expect(await summary(db, orderId)).toEqual({ rate: 500, total: 50000, total_usd: 100 });
     }));
 
-  it('a Viaje without a rate for the currency, or a General Pedido, uses the global rate', () =>
+  it('a Viaje without a rate for the currency, or a General Venta, uses the global rate', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       await setGlobalRate(db, 'EUR', 0.9);
@@ -50,7 +50,7 @@ describe('order_summary (Total of each Pedido)', () => {
       }
     }));
 
-  it('changing the Viaje rate changes its Pedidos USD Total but not General ones', () =>
+  it('changing the Viaje rate changes its Ventas USD Total but not General ones', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const customerId = await insertCustomer(db);
@@ -87,7 +87,7 @@ describe('order_summary (Total of each Pedido)', () => {
 });
 
 describe('order and order_item integrity', () => {
-  it('deleting a Pedido deletes its Artículos', () =>
+  it('deleting a Venta deletes its Artículos', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
       await insertOrderItem(db, { orderId, price: 5 });
@@ -115,14 +115,14 @@ describe('order and order_item integrity', () => {
       await expect(insertOrder(db, { customerId, status: 'lost' })).rejects.toThrow(/order_status_fkey/);
     }));
 
-  it('a Cliente with Pedidos cannot be deleted', () =>
+  it('a Cliente with Ventas cannot be deleted', () =>
     withRollback(async (db) => {
       const customerId = await insertCustomer(db);
       await insertOrder(db, { customerId });
       await expect(db.query('DELETE FROM customer WHERE id = $1', [customerId])).rejects.toThrow(/order_customer_id_fkey/);
     }));
 
-  it('a Viaje with Pedidos cannot be deleted', () =>
+  it('a Viaje with Ventas cannot be deleted', () =>
     withRollback(async (db) => {
       const tripId = await insertTrip(db);
       await insertOrder(db, { customerId: await insertCustomer(db), tripId });

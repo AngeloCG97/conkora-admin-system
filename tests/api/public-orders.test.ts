@@ -3,7 +3,7 @@ import { env } from '../helpers/env.ts';
 import { asAdmin, asManager, graphql, rootFieldNames, signTestJwt, typeNames } from '../helpers/hasura.ts';
 
 /**
- * Public page of a shared Pedido (issue #35): `order_share` permissions in Hasura and Hapi's
+ * Public page of a shared Venta (issue #35): `order_share` permissions in Hasura and Hapi's
  * GET /public/orders/{token}. Each test uses its own X-Forwarded-For address (the stack trusts one proxy
  * hop, like Render) so the per-IP rate limit of one test never affects another.
  */

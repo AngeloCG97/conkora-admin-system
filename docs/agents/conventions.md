@@ -69,9 +69,10 @@ Both `npm run check` and `npm test` must pass before opening a PR.
 ## Naming
 
 - DB/GraphQL/code identifiers in English, singular snake_case tables as in the PRD schema
-  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`).
-- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Venta, Artículo, Abono, Saldo…):
-  `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/reportes/`, `/monedas/`.
+  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`, `customer_request`, `customer_request_item`).
+  Code names don't follow the UI renames: `order` = Venta, `customer_request` = Pedido (see `CONTEXT.md`).
+- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Pedido, Venta, Artículo, Abono, Saldo…):
+  `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/ventas/`, `/reportes/`, `/monedas/`.
 
 ## Adding a table (migration + metadata + permissions)
 
@@ -80,7 +81,7 @@ Both `npm run check` and `npm test` must pass before opening a PR.
    Schema rules: `id uuid PRIMARY KEY DEFAULT gen_random_uuid()` for business entities; money
    `numeric(14,2)` with CHECKs from the PRD (`>= 0`, `> 0`); exchange rates `numeric(18,6)`;
    `created_at timestamptz NOT NULL DEFAULT now()`; FKs `ON DELETE RESTRICT` (Viaje, Cliente) or
-   `CASCADE` (Pedido → Artículos/Abonos) as in the PRD. Reference tables (`expense_category`,
+   `CASCADE` (Venta → Artículos/Abonos) as in the PRD. Reference tables (`expense_category`,
    `order_status`) are Hasura enum tables: `value text PRIMARY KEY, comment text`, seeded in the
    migration, `is_enum: true` in metadata.
 2. Add `hasura/metadata/databases/default/tables/public_<table>.yaml` and include it in `tables.yaml`
@@ -126,8 +127,8 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   `create_expense`) = `trip_rate.rate` if the Viaje fixes one, else `currency.global_rate`. Pass
   `trip_id = NULL` for General (no Viaje; never call it "Personal"). Every view converts through it:
   - to USD: `amount / effective_rate(trip_id, currency)`
-  - Abono to the Pedido's currency: `amount / effective_rate(o.trip_id, p.currency_code) * effective_rate(o.trip_id, o.currency_code)`
-    (rates of the **Pedido's** Viaje).
+  - Abono to the Venta's currency: `amount / effective_rate(o.trip_id, p.currency_code) * effective_rate(o.trip_id, o.currency_code)`
+    (rates of the **Venta's** Viaje).
 - Outputs: `round(x, 2)` on money columns; `COALESCE(sum(...), 0)` so empty aggregates are `0`, never null.
   For totals, sum the unrounded values and round once at the end (round per row only for per-row columns).
 - Existing views: `expense_summary` (`expense_id, trip_id, category, currency_code, rate, amount_usd, is_personal`),
@@ -139,38 +140,60 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   `no_trip_summary` append `personal_expenses_usd` and `business_expenses_usd` (= the two subtotals of `expenses_usd`).
   Fixture: `insertExpense({ isPersonal: true })`.
 - `order_summary` (`order_id, customer_id, trip_id, status, currency_code, rate, total, total_usd`; migration
-  `create_order_and_items`), exposed as `order.summary`. `total` = Σ price × quantity in the Pedido's currency (0 when
+  `create_order_and_items`), exposed as `order.summary`. `total` = Σ price × quantity in the Venta's currency (0 when
   it has no Artículos), `total_usd` converts with the Viaje's effective rate. It **includes Cancelados**: the
   per-Cliente/Viaje views must filter `status <> 'cancelled'`. `"order"` is a reserved word: always quote it in SQL
   (GraphQL: `order`, `order_by_pk`, `insert_order_one`). Statuses: enum table `order_status` (`pending, delivered, cancelled`).
   Fixtures: `insertOrder`, `insertOrderItem`.
 - Abonos: table `payment` (`order_id` CASCADE, `amount > 0`, own `currency_code`, `date`, `notes`; migration
   `create_payment`), `order.payments`. The same migration extends `order_summary` with
-  `paid, balance, paid_usd, balance_usd, is_paid` (in the Pedido's currency / USD). Semantics:
-  `paid` = Σ Abonos converted with the **Pedido's** Viaje rates (formula above); `paid_usd` = Σ `amount / rate(Abono currency)`;
+  `paid, balance, paid_usd, balance_usd, is_paid` (in the Venta's currency / USD). Semantics:
+  `paid` = Σ Abonos converted with the **Venta's** Viaje rates (formula above); `paid_usd` = Σ `amount / rate(Abono currency)`;
   `balance` = Saldo = `total − paid` (negative = overpaid); `is_paid` = `total > 0 AND balance <= 0` (the "Pagado" indicator;
-  a Pedido without Artículos is neither Pagado nor pendiente). **Rounding rule**: each of `total, total_usd, paid, paid_usd` sums
+  a Venta without Artículos is neither Pagado nor pendiente). **Rounding rule**: each of `total, total_usd, paid, paid_usd` sums
   unrounded values and is rounded once; `balance`/`balance_usd` subtract the already-rounded values, so Total − Abono = Saldo
-  is exact in every view. Aggregates over Pedidos (per Cliente/Viaje) should sum these per-Pedido rounded columns
-  (`total_usd`, `paid_usd`, `balance_usd`, excluding `status = 'cancelled'`) so they match what each Pedido shows and stay
-  consistent. Fixture: `insertPayment`. Frontend: `pedidos/PaymentDialog.tsx`, `PaymentChip`/`paymentState` (`orders.ts`).
-- Cuenta del Cliente (migration `create_customer_summaries`, USD, Cancelados excluded, sums the per-Pedido rounded columns):
-  `customer_summary` (`customer_id, order_count, total_usd, paid_usd, balance_usd`; one row per Cliente, zeros/0 when no Pedidos;
+  is exact in every view. Aggregates over Ventas (per Cliente/Viaje) should sum these per-Venta rounded columns
+  (`total_usd`, `paid_usd`, `balance_usd`, excluding `status = 'cancelled'`) so they match what each Venta shows and stay
+  consistent. Fixture: `insertPayment`. Frontend: `ventas/PaymentDialog.tsx`, `PaymentChip`/`paymentState` (`orders.ts`).
+- Cuenta del Cliente (migration `create_customer_summaries`, USD, Cancelados excluded, sums the per-Venta rounded columns):
+  `customer_summary` (`customer_id, order_count, total_usd, paid_usd, balance_usd`; one row per Cliente, zeros/0 when no Ventas;
   `customer.summary`) and `customer_trip_summary` (`customer_id, trip_id, order_count, total_usd, paid_usd, balance_usd`; one row per
-  Cliente and Viaje with non-cancelled Pedidos, `trip_id` null = General; `customer.trip_summaries`, `trip.customer_summaries`,
+  Cliente and Viaje with non-cancelled Ventas, `trip_id` null = General; `customer.trip_summaries`, `trip.customer_summaries`,
   `customer_trip_summary.trip`). Frontend: `clientes/AccountFigures.tsx`; account queries use keys `['orders', 'customers' | 'customer-account', ...]`
-  so Abono/Pedido mutations (which invalidate `['orders']`) refresh them; the Clientes list sorts by Saldo via
+  so Abono/Venta mutations (which invalidate `['orders']`) refresh them; the Clientes list sorts by Saldo via
   `order_by: { summary: { balance_usd: desc } }` (`customerOrderBy`).
 
 - Montos en ₡ y $ (issue #30, migration `dual_currency_amounts`): every view with `*_usd` also has `*_crc` (appended at the end),
   converted with `to_crc(trip_id, amount, currency)` = `amount / effective_rate(trip, currency) × effective_rate(trip, 'CRC')`
-  (a CRC amount stays as is; Abonos use the Pedido's Viaje; `COALESCE(..., 0)` so it is never null, even without CRC). Same
-  rounding as USD: per-row `round(x, 2)`, aggregates sum the per-Pedido/Gasto rounded `*_crc`. Per-record views:
+  (a CRC amount stays as is; Abonos use the Venta's Viaje; `COALESCE(..., 0)` so it is never null, even without CRC). Same
+  rounding as USD: per-row `round(x, 2)`, aggregates sum the per-Venta/Gasto rounded `*_crc`. Per-record views:
   `expense_summary.amount_crc`, `order_summary.total_crc/paid_crc/balance_crc`, `order_item_summary` (`order_item.summary`:
   `line_total, line_total_usd, line_total_crc`) and `payment_summary` (`payment.summary`: `rate, order_currency_code,
   order_amount, amount_usd, amount_crc`). Frontend: `components/money/DualAmount.tsx` shows the official amount in its currency
   and, muted below, its equivalents (`lib/money.ts` → `equivalentAmounts`/`formatEquivalents`: ₡ → $, $ → ₡, other → ₡ and $);
   for reports/totals pass only `usd` + `crc`. Every money display uses it (or `Figure`/`AccountFigures`, which wrap it).
+
+## Adding a multi-step write (Hasura-tracked mutation function)
+
+When one user action must change several rows atomically (e.g. "Mover a Venta"), write a Postgres function instead of a
+Hapi endpoint: Hasura runs each mutation in one transaction, so the function is all-or-nothing and needs no backend deploy.
+Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEFAULT NULL) RETURNS SETOF "order"`
+(migration `move_request_item_to_order`).
+
+1. `CREATE FUNCTION ... RETURNS SETOF public.<tracked table> LANGUAGE plpgsql VOLATILE` in a new migration (`down.sql`:
+   `DROP FUNCTION` with its argument types). Qualify parameters that share a column name (`move_request_item_to_order.price`).
+2. Track it in `hasura/metadata/databases/default/functions/functions.yaml` with `configuration: { exposed_as: mutation }`
+   and `permissions: [{ role: manager }]`. GraphQL: `move_request_item_to_order(args: { item_id, price, today }) { id }`.
+3. User-facing errors: `RAISE EXCEPTION '<Spanish message>' USING ERRCODE = 'invalid_parameter_value'` (22023). Hasura
+   returns it as `extensions.code = 'data-exception'` **with the message**; plain `RAISE EXCEPTION` (P0001) comes back as
+   `unexpected` / "database query error" and the message is lost for `manager`.
+4. Concurrency: lock what you read (`SELECT ... FOR UPDATE`) and, when the function may *create* a row others could also
+   create, take `pg_advisory_xact_lock(hashtextextended('<function>:<key>', 0))` before looking for it (READ COMMITTED: the
+   next statement sees what the lock holder committed).
+5. Relationships selected on the returned rows are read in the same statement snapshot, so they do **not** see rows the
+   function inserted: return the id and refetch (invalidate the query keys).
+6. Tests: `tests/db/<name>.test.ts` (logic, `withRollback`; concurrency with two `pg.Client`s on committed rows cleaned up in
+   `afterAll`) and a case in `tests/hasura/permissions.test.ts` (manager can call it, error code/message, no JWT rejected).
 
 ## Adding a SQL view (financial calculations)
 
@@ -236,7 +259,7 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
     mutationFn: (id: string) => gqlRequest(DELETE_TRIP, { id }),
     onSuccess: () => { notify.success('Viaje eliminado'); qc.invalidateQueries({ queryKey: ['trips'] }); },
     onError: (e) => notify.error(e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-      ? 'No se puede eliminar: el Viaje tiene Gastos o Pedidos' : 'No se pudo eliminar'),
+      ? 'No se puede eliminar: el Viaje tiene Gastos, Ventas o Pedidos' : 'No se pudo eliminar'),
   });
   // if (await confirm({ title: '¿Eliminar el Viaje?', confirmText: 'Eliminar', danger: true })) remove.mutate(id);
   ```
@@ -260,17 +283,27 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Text search (`clientes/page.tsx`): a `TextField` in `useState`, turned into `_or` of `_ilike` by a pure helper
   (`clientes/customers.ts` → `customerWhere`, escapes `%`/`_`); query key `['customers', where]` with
   `placeholderData: (prev) => prev` so the list doesn't flash while typing.
-- Pedidos (`pedidos/`): `OrderDialog` (create/edit; a new Pedido navigates to its detail; `fixedCustomerId` locks the
+- Ventas (`ventas/`): `OrderDialog` (create/edit; a new Venta navigates to its detail; `fixedCustomerId` locks the
   Cliente, `defaultCustomerId`/`defaultTripId` only preselect), `OrderCard` + `ORDER_ROW_FIELDS` (shared list row, also used
-  on the Cliente detail), `OrderItemDialog`, filters via `orderWhere`. Shared select options: query key `['order-options']`;
-  Pedido lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
+  on the Cliente detail), `OrderItemDialog` (also edits `order_item.description`, shown in the Venta detail but not on the
+  public page: `public/order-dto.ts` does not include it), filters via `orderWhere`. Shared select options: query key `['order-options']`;
+  Venta lists use the key prefix `['orders']`, the detail `['order', id]`. MUI 9 `Stack` has no system props: put
   `justifyContent`/`alignItems` inside `sx`.
+- Pedidos (`pedidos/`, tables `customer_request` + `customer_request_item`, migration `create_customer_request`): what a Cliente
+  asks us to find. `RequestDialog` (create/edit, reuses `['order-options']`), `RequestItemDialog` (name, talla, descripción,
+  photo; no price), filters via `requestWhere` (= `orderWhere` without Estado). Keys: list `['requests', where]`, detail
+  `['request', id]`. "Mover a Venta" = `MoveToOrderDialog` → SQL function `move_request_item_to_order` (section above): asks
+  only the price, previews the target with `moveTargetWhere` (key `['orders', 'move-target', ...]`), passes `today = todayIso()`
+  (the browser's date, not the server's UTC), then invalidates `['request', id]`, `['requests']`, `['orders']`, `['order']`
+  and notifies with a link (`notify.success(message, { label, href })`). Target rule: most recent (`date`, then `created_at`)
+  Pendiente Venta of the same Cliente and `trip_id IS NOT DISTINCT FROM` the Pedido's; none → new Pendiente Venta in CRC.
+  The Artículo is copied with quantity 1 (name, size, description, photo_url) and deleted from the Pedido.
 - Reporte por Viaje (`viajes/TripReport.tsx`): SQL views `trip_summary` (one row per Viaje, 0s when empty; `income_usd`, `collected_usd`,
   `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`, `personal_expenses_usd`, `business_expenses_usd`) and `trip_expense_category_summary`, exposed as `trip.summary` /
   `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
   Gasto and trip-rate mutations also invalidate `['orders']`.
 - Inicio (`(app)/page.tsx`, migration `create_no_trip_summary`): SQL view `no_trip_summary` (same columns as `trip_summary` minus `trip_id`; always one row,
-  0s when empty; Pedidos/Gastos with `trip_id IS NULL`, Cancelados excluded). The dashboard shows Saldo total (`customer_summary_aggregate` sum),
+  0s when empty; Ventas/Gastos with `trip_id IS NULL`, Cancelados excluded). The dashboard shows Saldo total (`customer_summary_aggregate` sum),
   the last 5 Viajes with Utilidad (`trip_summary_aggregate` for the card) and the General Ingreso/Gastos/Saldo.
   Utilidad global: view `business_summary` (one row, 0s when empty; same money columns as `trip_summary` minus `trip_id`) defined as
   Σ (`trip_summary` UNION ALL `no_trip_summary`), so it always equals the sum of the reports; shown at the top of Inicio.
@@ -279,8 +312,9 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
 - Fotos de Artículos (issue #13): `order_item.photo_url` stores only Cloudinary's `secure_url`. Hapi `POST /uploads/signature`
   (`routes/uploads.ts`, JWT checked by hand with `jose`; 503 when `CLOUDINARY_*` are unset) returns a signed payload
   (`cloudName, apiKey, timestamp, folder, signature`; SHA-1 in `uploads/cloudinary.ts`); the browser uploads directly to
-  Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `pedidos/ItemPhoto.tsx` (thumbnail + enlarge) and the photo
-  controls in `OrderItemDialog`.
+  Cloudinary (`lib/photos.ts` → `uploadPhoto`, `thumbnailUrl`). UI: `ventas/ItemPhoto.tsx` (thumbnail + enlarge) and
+  `ventas/PhotoPicker.tsx` (add/change/remove, used by `OrderItemDialog` and `RequestItemDialog`). Pedido Artículos use the same
+  signature and folder; `customer_request_item.photo_url` moves to `order_item.photo_url` as is.
 - PWA (issue #34): hand-written service worker, no plugin. `frontend/pwa/` holds the manifest builder (`manifest.mjs`), the
   tested caching policy (`sw-policy.mjs`, `routeRequest` → `'cache' | 'network-only'`) and `sw.template.js`; the `postbuild`
   script `scripts/build-pwa.mjs` writes `out/manifest.webmanifest` and `out/sw.js` (policy inlined, precache list and cache
@@ -290,15 +324,15 @@ Hasura answers auth/permission errors with HTTP 200 + `errors[].extensions.code`
   "Sin conexión…" (login refuses to start the "Despertando el servidor…" retries while `navigator.onLine` is false).
   Icons: `npm run icons` (in `frontend/`) renders `public/logo-tinta.svg` on Crema into `public/icons/*.png` with `sharp`;
   rerun it and commit the PNGs when the official logo replaces the file. Changing the policy: edit `pwa/sw-policy.mjs` + its test.
-- Enlace público del Pedido (issue #35, the **only** public page): table `order_share` (`order_id` PK → `order` CASCADE,
+- Enlace público de la Venta (issue #35, the **only** public page): table `order_share` (`order_id` PK → `order` CASCADE,
   `token` = 48 hex chars from `gen_random_bytes(24)` as column default). `manager` selects/inserts (`order_id` only)/deletes;
   regenerate = delete + insert in one mutation; revoke = delete. No anonymous role in Hasura, ever. The page
-  `app/pedido/page.tsx` (`?t=<token>`, outside `(app)/`, `noindex` + `referrer: no-referrer` in its layout) calls Hapi
+  `app/venta/page.tsx` (`/venta/?t=<token>`, no redirect from the old `/pedido/`, outside `(app)/`, `noindex` + `referrer: no-referrer` in its layout) calls Hapi
   `GET /public/orders/{token}` (`routes/public-orders.ts`): token format checked first, fixed admin-secret query, DTO built
   field by field in `public/order-dto.ts` (never spread rows; new fields need the allowlist in both test files updated),
   identical 404 for invalid/unknown/revoked/Cancelado, `Cache-Control: no-store`, CORS = `CORS_ORIGIN`, in-memory token
   bucket per IP (30/min; IP = X-Forwarded-For entry `TRUSTED_PROXY_HOPS` from the right, `1` on Render and in compose).
-  Share button: `pedidos/ShareOrder.tsx` + `lib/share.ts` (`shareUrl`, `shareLink`: Web Share → clipboard fallback).
+  Share button: `ventas/ShareOrder.tsx` + `lib/share.ts` (`shareUrl`, `shareLink`: Web Share → clipboard fallback).
 - Theme: use palette tokens (`color="primary"`, `bgcolor: 'secondary.main'`, `accent` = Arcilla); the hex
   values live only in `src/theme/brand.ts`. Mobile first: test at 390px wide; prefer cards/stacked
   layouts on `xs` over wide tables; forms in a `Dialog` with `fullScreen` on `xs`.

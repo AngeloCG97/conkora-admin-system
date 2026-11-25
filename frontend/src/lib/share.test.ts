@@ -13,16 +13,16 @@ describe('isShareToken', () => {
 });
 
 describe('shareUrl', () => {
-  it('builds the absolute public URL with the basePath and never the Pedido id', () => {
+  it('builds the absolute public URL with the basePath and never the Venta id', () => {
     expect(shareUrl('https://angelocg97.github.io', '/conkora-admin-system', TOKEN)).toBe(
-      `https://angelocg97.github.io/conkora-admin-system/pedido/?t=${TOKEN}`,
+      `https://angelocg97.github.io/conkora-admin-system/venta/?t=${TOKEN}`,
     );
-    expect(shareUrl('http://localhost:3000', '', TOKEN)).toBe(`http://localhost:3000/pedido/?t=${TOKEN}`);
+    expect(shareUrl('http://localhost:3000', '', TOKEN)).toBe(`http://localhost:3000/venta/?t=${TOKEN}`);
   });
 });
 
 describe('shareLink', () => {
-  const data = { title: 'Venta', text: 'Hola', url: 'https://x/pedido/?t=1' };
+  const data = { title: 'Venta', text: 'Hola', url: 'https://x/venta/?t=1' };
   const abort = () => Object.assign(new Error('closed'), { name: 'AbortError' });
 
   it('uses the Web Share API when available', async () => {

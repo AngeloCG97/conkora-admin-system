@@ -2,6 +2,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff';
 import HomeIcon from '@mui/icons-material/Home';
+import ManageSearchIcon from '@mui/icons-material/ManageSearch';
 import PeopleIcon from '@mui/icons-material/People';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
@@ -20,7 +21,8 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Viajes', href: '/viajes/', icon: FlightTakeoffIcon },
   { label: 'Gastos', href: '/gastos/', icon: ReceiptLongIcon },
   { label: 'Clientes', href: '/clientes/', icon: PeopleIcon },
-  { label: 'Ventas', href: '/pedidos/', icon: ShoppingBagIcon },
+  { label: 'Pedidos', href: '/pedidos/', icon: ManageSearchIcon },
+  { label: 'Ventas', href: '/ventas/', icon: ShoppingBagIcon },
   { label: 'Reportes', href: '/reportes/', icon: AssessmentIcon },
   { label: 'Monedas', href: '/monedas/', icon: AttachMoneyIcon },
 ];

@@ -3,7 +3,7 @@ import type { SxProps, Theme } from '@mui/material/styles';
 import Typography from '@mui/material/Typography';
 import { DualAmount } from '@/components/money/DualAmount';
 
-/** Pedidos count, Total, Abono and Saldo in USD and CRC as computed by the `customer_summary` / `customer_trip_summary` views. */
+/** Ventas count, Total, Abono and Saldo in USD and CRC as computed by the `customer_summary` / `customer_trip_summary` views. */
 export interface AccountSummary {
   order_count: number;
   total_usd: number;

@@ -17,7 +17,7 @@ describe('no_trip_summary', () => {
     ]);
   }));
 
-  it('sums General Pedidos and Gastos (no Viaje) in USD, excluding Cancelados and Viaje data', () => withRollback(async (db) => {
+  it('sums General Ventas and Gastos (no Viaje) in USD, excluding Cancelados and Viaje data', () => withRollback(async (db) => {
     await db.query(`DELETE FROM expense WHERE trip_id IS NULL`);
     await db.query(`DELETE FROM "order" WHERE trip_id IS NULL`);
     await setGlobalRate(db, 'CRC', 500);
@@ -33,7 +33,7 @@ describe('no_trip_summary', () => {
     await insertPayment(db, { orderId: b, amount: 10000, currency: 'CRC' });
     const x = await insertOrder(db, { customerId, status: 'cancelled' });
     await insertOrderItem(db, { orderId: x, price: 999 });
-    // Pedido with a Viaje does not count
+    // Venta with a Viaje does not count
     const t = await insertOrder(db, { customerId, tripId });
     await insertOrderItem(db, { orderId: t, price: 777 });
 

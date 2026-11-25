@@ -329,11 +329,11 @@ describe('order, order_item, order_status and order_summary', () => {
     await asAdmin(`mutation {
       delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
       delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
-      delete_trip(where: { name: { _eq: "Viaje con Pedidos" } }) { affected_rows }
+      delete_trip(where: { name: { _eq: "Viaje con Ventas" } }) { affected_rows }
     }`);
   });
 
-  it('manager does CRUD on Pedidos and Artículos and reads the Total through summary', async () => {
+  it('manager does CRUD on Ventas and Artículos and reads the Total through summary', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql<{ insert_order_one: { id: string; items: { id: string }[] } }>(
       `mutation { insert_order_one(object: {
@@ -398,12 +398,12 @@ describe('order, order_item, order_status and order_summary', () => {
     expect(qty.errors?.[0]?.message).toMatch(/order_item_quantity_check/);
   });
 
-  it('a Cliente or a Viaje with Pedidos cannot be deleted', async () => {
+  it('a Cliente or a Viaje with Ventas cannot be deleted', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql<{ insert_order_one: { id: string; customer_id: string; trip_id: string } }>(
       `mutation { insert_order_one(object: {
         customer: { data: { name: "${NAME}" } },
-        trip: { data: { name: "Viaje con Pedidos", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02" } },
+        trip: { data: { name: "Viaje con Ventas", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02" } },
         currency_code: "USD", date: "2026-02-01"
       }) { id customer_id trip_id } }`,
       { auth },
@@ -488,7 +488,7 @@ describe('payment and order_summary Abono/Saldo', () => {
     }
   });
 
-  it('deleting a Pedido deletes its Abonos', async () => {
+  it('deleting a Venta deletes its Abonos', async () => {
     const token = await signTestJwt();
     const orderId = await insertOrder(token);
     const ins = await graphql(
@@ -636,7 +636,7 @@ describe('CRC equivalents (*_crc), order_item_summary and payment_summary', () =
     }`);
   });
 
-  it('manager reads ₡ and $ of Pedidos, Artículos, Abonos and the Cliente account', async () => {
+  it('manager reads ₡ and $ of Ventas, Artículos, Abonos and the Cliente account', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql(
       `mutation { insert_order_one(object: {
@@ -730,6 +730,104 @@ describe('similar_customers', () => {
 
   it('rejects a request without a JWT', async () => {
     const result = await graphql(QUERY, { auth: { none: true }, variables: { name: 'x' } });
+    expect(result.data).toBeUndefined();
+    expect(errorCode(result)).toBe('invalid-headers');
+  });
+});
+
+describe('customer_request, customer_request_item and move_request_item_to_order (Pedidos)', () => {
+  const NAME = 'Cliente de prueba Pedidos';
+  const MOVE = `mutation ($item: uuid!, $price: numeric!) {
+    move_request_item_to_order(args: { item_id: $item, price: $price, today: "2026-03-01" }) {
+      id currency_code status trip_id
+    }
+  }`;
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer_request(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager does CRUD on Pedidos and their Artículos', async () => {
+    const ins = await asManager<{ insert_customer_request_one: { id: string; items: { id: string }[] } }>(
+      `mutation { insert_customer_request_one(object: {
+        customer: { data: { name: "${NAME}" } }, date: "2026-01-12", notes: "Busca tenis",
+        items: { data: [{ name: "Tenis", size: "42", description: "Blancos" }, { name: "Gorra" }] }
+      }) { id items(order_by: { name: desc }) { id } } }`,
+    );
+    expect(ins.errors).toBeUndefined();
+    const { id, items } = ins.data!.insert_customer_request_one;
+
+    const upd = await asManager(
+      `mutation { update_customer_request_by_pk(pk_columns: { id: "${id}" }, _set: { notes: "Urgente" }) { notes }
+        update_customer_request_item_by_pk(pk_columns: { id: "${items[1].id}" }, _set: { size: "M" }) { size } }`,
+    );
+    expect(upd.data).toEqual({ update_customer_request_by_pk: { notes: 'Urgente' }, update_customer_request_item_by_pk: { size: 'M' } });
+
+    const sel = await asManager<{ customer_request_by_pk: { items_aggregate: { aggregate: { count: number } } } }>(
+      `{ customer_request_by_pk(id: "${id}") { customer { name } trip { name } items_aggregate { aggregate { count } } } }`,
+    );
+    expect(sel.errors).toBeUndefined();
+    expect(sel.data!.customer_request_by_pk.items_aggregate.aggregate.count).toBe(2);
+
+    const delItem = await asManager(`mutation { delete_customer_request_item_by_pk(id: "${items[0].id}") { id } }`);
+    expect(delItem.errors).toBeUndefined();
+    const del = await asManager(`mutation { delete_customer_request_by_pk(id: "${id}") { id } }`);
+    expect(del.errors).toBeUndefined();
+  });
+
+  it('rejects a blank Artículo name', async () => {
+    const result = await asManager(
+      `mutation { insert_customer_request_one(object: {
+        customer: { data: { name: "${NAME}" } }, date: "2026-01-12", items: { data: [{ name: "  " }] }
+      }) { id } }`,
+    );
+    expect(result.errors?.[0]?.message).toMatch(/customer_request_item_name_check/);
+  });
+
+  it('manager moves an Artículo into a new CRC Venta and the Artículo leaves the Pedido', async () => {
+    const ins = await asManager<{ insert_customer_request_one: { items: { id: string }[] } }>(
+      `mutation { insert_customer_request_one(object: {
+        customer: { data: { name: "${NAME}" } }, date: "2026-01-12",
+        items: { data: [{ name: "Bolso", size: "U", description: "Negro" }] }
+      }) { items { id } } }`,
+    );
+    expect(ins.errors).toBeUndefined();
+    const itemId = ins.data!.insert_customer_request_one.items[0]!.id;
+
+    const moved = await asManager<{ move_request_item_to_order: { id: string }[] }>(MOVE, { item: itemId, price: 25000 });
+    expect(moved.errors).toBeUndefined();
+    expect(moved.data!.move_request_item_to_order).toEqual([
+      expect.objectContaining({ currency_code: 'CRC', status: 'pending', trip_id: null }),
+    ]);
+    // Relationships of the returned row are read in the same statement, before the function's own inserts are
+    // visible, so the new Artículo is queried separately.
+    const orderId = moved.data!.move_request_item_to_order[0]!.id;
+    const venta = await asManager<{ order_by_pk: { items: unknown[] } }>(
+      `{ order_by_pk(id: "${orderId}") { items { name price quantity size description photo_url } } }`,
+    );
+    expect(venta.data!.order_by_pk.items).toEqual([
+      { name: 'Bolso', price: 25000, quantity: 1, size: 'U', description: 'Negro', photo_url: null },
+    ]);
+    const left = await asManager<{ customer_request_item: unknown[] }>(
+      `{ customer_request_item(where: { id: { _eq: "${itemId}" } }) { id } }`,
+    );
+    expect(left.data!.customer_request_item).toEqual([]);
+
+    // Moving it again: a clear, user-facing error (SQLSTATE 22023 → data-exception keeps the message).
+    const again = await asManager(MOVE, { item: itemId, price: 25000 });
+    expect(errorCode(again)).toBe('data-exception');
+    expect(again.errors?.[0]?.message).toBe('El Artículo del Pedido no existe o ya se movió a una Venta');
+  });
+
+  it('rejects a move without a JWT', async () => {
+    const result = await graphql(MOVE, {
+      auth: { none: true },
+      variables: { item: '00000000-0000-0000-0000-000000000000', price: 1 },
+    });
     expect(result.data).toBeUndefined();
     expect(errorCode(result)).toBe('invalid-headers');
   });

@@ -18,8 +18,8 @@ import { useConfirm, useNotify } from '@/components/feedback/FeedbackProvider';
 import { Loading } from '@/components/feedback/Loading';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { GraphQLRequestError, gqlRequest } from '@/lib/graphql';
-import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from '../../pedidos/OrderCard';
-import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../../pedidos/OrderDialog';
+import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from '../../ventas/OrderCard';
+import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../../ventas/OrderDialog';
 import { ACCOUNT_SUMMARY_FIELDS, AccountFigures, type AccountSummary } from '../AccountFigures';
 import { CUSTOMER_FIELDS, CustomerDialog, type Customer } from '../CustomerDialog';
 import { NO_TRIP_LABEL } from '@/lib/terms';
@@ -69,7 +69,7 @@ function CustomerDetail({ id }: { id: string }) {
     queryKey: ['orders', 'customer', id],
     queryFn: () => gqlRequest<{ order: OrderRow[] }>(CUSTOMER_ORDERS_QUERY, { id }),
   });
-  // Under ['orders', ...] so Pedido/Abono changes refresh the account.
+  // Under ['orders', ...] so Venta/Abono changes refresh the account.
   const account = useQuery({
     queryKey: ['orders', 'customer-account', id],
     queryFn: () => gqlRequest<CustomerAccount>(CUSTOMER_ACCOUNT_QUERY, { id }),
@@ -92,7 +92,7 @@ function CustomerDetail({ id }: { id: string }) {
     onError: (e) =>
       notify.error(
         e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-          ? 'No se puede eliminar: el Cliente tiene Ventas'
+          ? 'No se puede eliminar: el Cliente tiene Ventas o Pedidos'
           : 'No se pudo eliminar',
       ),
   });

@@ -5,7 +5,7 @@ import {
 } from '../helpers/fixtures.ts';
 
 describe('customer_summary and customer_trip_summary', () => {
-  it('Cliente sin Pedidos tiene totales en 0 y cantidad 0, sin filas por Viaje', () => withRollback(async (db) => {
+  it('Cliente sin Ventas tiene totales en 0 y cantidad 0, sin filas por Viaje', () => withRollback(async (db) => {
     const customerId = await insertCustomer(db);
     const { rows } = await db.query('SELECT customer_id, order_count, total_usd, paid_usd, balance_usd FROM customer_summary WHERE customer_id = $1', [customerId]);
     expect(rows).toEqual([{ customer_id: customerId, order_count: 0, total_usd: 0, paid_usd: 0, balance_usd: 0 }]);
@@ -13,7 +13,7 @@ describe('customer_summary and customer_trip_summary', () => {
     expect(byTrip.rows).toEqual([]);
   }));
 
-  it('suma Total, Abono y Saldo en USD de varios Pedidos y monedas; los Cancelados no cuentan', () => withRollback(async (db) => {
+  it('suma Total, Abono y Saldo en USD de varios Ventas y monedas; los Cancelados no cuentan', () => withRollback(async (db) => {
     await setGlobalRate(db, 'CRC', 500);
     const tripId = await insertTrip(db, { rates: { CRC: 400 } });
     const customerId = await insertCustomer(db);
@@ -53,7 +53,7 @@ describe('customer_summary and customer_trip_summary', () => {
     });
   }));
 
-  it('un Cliente con solo Pedidos Cancelados tiene 0 y no aparece por Viaje', () => withRollback(async (db) => {
+  it('un Cliente con solo Ventas Cancelados tiene 0 y no aparece por Viaje', () => withRollback(async (db) => {
     const tripId = await insertTrip(db);
     const customerId = await insertCustomer(db);
     const o = await insertOrder(db, { customerId, tripId, status: 'cancelled' });
@@ -64,7 +64,7 @@ describe('customer_summary and customer_trip_summary', () => {
     expect(byTrip.rows).toEqual([]);
   }));
 
-  it('el Saldo del Cliente suma los Saldos redondeados de cada Pedido (Total − Abono = Saldo)', () => withRollback(async (db) => {
+  it('el Saldo del Cliente suma los Saldos redondeados de cada Venta (Total − Abono = Saldo)', () => withRollback(async (db) => {
     await setGlobalRate(db, 'CRC', 3);
     const customerId = await insertCustomer(db);
     for (let i = 0; i < 3; i++) {
@@ -73,7 +73,7 @@ describe('customer_summary and customer_trip_summary', () => {
       await insertPayment(db, { orderId: o, amount: 1, currency: 'CRC' });
     }
     const { rows: [r] } = await db.query('SELECT total_usd, paid_usd, balance_usd FROM customer_summary WHERE customer_id = $1', [customerId]);
-    // each Pedido: total 3.33, abono 0.33, saldo 3.00 (rounded per Pedido, then summed)
+    // each Venta: total 3.33, abono 0.33, saldo 3.00 (rounded per Venta, then summed)
     expect(r).toEqual({ total_usd: 9.99, paid_usd: 0.99, balance_usd: 9 });
   }));
 });

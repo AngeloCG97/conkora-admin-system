@@ -11,7 +11,7 @@ export interface ServerDeps {
   config: Pick<Config, 'port' | 'host' | 'corsOrigins' | 'jwt'> &
     Partial<Pick<Config, 'cloudinary' | 'trustedProxyHops'>>;
   adminUsers: AdminUserStore;
-  /** Public page of a shared Pedido (issue #35). Without it the endpoint answers 404 for every token. */
+  /** Public page of a shared Venta (issue #35). Without it the endpoint answers 404 for every token. */
   publicOrders?: PublicOrderStore;
   /** Overrides the rate limit of the public endpoint (tests). */
   publicRateLimit?: Partial<Omit<PublicRateLimitConfig, 'trustedProxyHops'>>;

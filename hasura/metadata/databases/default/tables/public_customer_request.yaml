@@ -1,0 +1,37 @@
+table:
+  name: customer_request
+  schema: public
+object_relationships:
+  - name: customer
+    using:
+      foreign_key_constraint_on: customer_id
+  - name: trip
+    using:
+      foreign_key_constraint_on: trip_id
+array_relationships:
+  - name: items
+    using:
+      foreign_key_constraint_on:
+        column: request_id
+        table: { name: customer_request_item, schema: public }
+select_permissions:
+  - role: manager
+    permission:
+      columns: [id, customer_id, trip_id, date, notes, created_at]
+      filter: {}
+      allow_aggregations: true
+insert_permissions:
+  - role: manager
+    permission:
+      check: {}
+      columns: [customer_id, trip_id, date, notes]
+update_permissions:
+  - role: manager
+    permission:
+      filter: {}
+      check: {}
+      columns: [customer_id, trip_id, date, notes]
+delete_permissions:
+  - role: manager
+    permission:
+      filter: {}

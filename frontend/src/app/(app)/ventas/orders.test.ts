@@ -5,7 +5,7 @@ describe('orderWhere', () => {
   it('has no conditions without filters', () => {
     expect(orderWhere({ trip: { kind: 'all' }, customerId: null, status: null })).toEqual({});
   });
-  it('filters General Pedidos (no Viaje)', () => {
+  it('filters General Ventas (no Viaje)', () => {
     expect(orderWhere({ trip: { kind: 'general' }, customerId: null, status: null })).toEqual({
       trip_id: { _is_null: true },
     });
@@ -46,7 +46,7 @@ describe('paymentState', () => {
     expect(paymentState('delivered', { balance: -5, is_paid: true })).toBe('paid');
     expect(paymentState('pending', { balance: 10, is_paid: false })).toBe('pending');
   });
-  it('shows nothing for a Cancelado, an empty Pedido or a missing summary', () => {
+  it('shows nothing for a Cancelado, an empty Venta or a missing summary', () => {
     expect(paymentState('cancelled', { balance: 10, is_paid: false })).toBeNull();
     expect(paymentState('pending', { balance: 0, is_paid: false })).toBeNull();
     expect(paymentState('pending', null)).toBeNull();

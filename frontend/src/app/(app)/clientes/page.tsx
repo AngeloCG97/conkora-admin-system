@@ -33,7 +33,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<CustomerSort>('name');
   const where = customerWhere(search);
-  // Under ['orders', ...] so Abono/Pedido changes refresh the Saldo shown here.
+  // Under ['orders', ...] so Abono/Venta changes refresh the Saldo shown here.
   const { data, isPending } = useQuery({
     queryKey: ['orders', 'customers', where, sort],
     queryFn: () => gqlRequest<{ customer: CustomerRow[] }>(CUSTOMERS_QUERY, { where, orderBy: customerOrderBy(sort) }),

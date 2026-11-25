@@ -73,7 +73,7 @@ function Figure(props: { label: string; usd: number; crc: number; color?: string
 }
 
 export default function HomePage() {
-  // Keys under ['orders', ...] so Abono/Pedido/Gasto changes refresh the figures (see conventions).
+  // Keys under ['orders', ...] so Abono/Venta/Gasto changes refresh the figures (see conventions).
   const { data, isPending } = useQuery({
     queryKey: ['orders', 'dashboard'],
     queryFn: () => gqlRequest<DashboardData>(DASHBOARD_QUERY),
