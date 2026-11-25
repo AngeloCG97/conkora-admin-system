@@ -3,6 +3,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { FeedbackProvider } from '@/components/feedback/FeedbackProvider';
+import { OfflineBanner } from '@/components/pwa/OfflineBanner';
+import { PwaUpdater } from '@/components/pwa/PwaUpdater';
 import { GraphQLRequestError } from '@/lib/graphql';
 import { ThemeRegistry } from '@/theme/ThemeRegistry';
 
@@ -27,6 +29,8 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeRegistry>
       <QueryClientProvider client={queryClient}>
         <FeedbackProvider>{children}</FeedbackProvider>
+        <OfflineBanner />
+        <PwaUpdater />
       </QueryClientProvider>
     </ThemeRegistry>
   );
