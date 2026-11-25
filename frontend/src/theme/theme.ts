@@ -14,6 +14,10 @@ declare module '@mui/material/styles' {
   }
 }
 
+/** Texto: Inter (cuerpo y detalles). Display: Space Grotesk (titulares y logotipo). Loaded in app/layout.tsx. */
+const textFontFamily = 'var(--font-text), system-ui, sans-serif';
+const displayFontFamily = 'var(--font-display), var(--font-text), system-ui, sans-serif';
+
 export const theme = createTheme({
   cssVariables: true,
   palette: {
@@ -28,14 +32,14 @@ export const theme = createTheme({
   },
   shape: { borderRadius: 12 },
   typography: {
-    fontFamily: 'var(--font-brand), system-ui, sans-serif',
-    h1: { fontWeight: 800 },
-    h2: { fontWeight: 800 },
-    h3: { fontWeight: 700 },
-    h4: { fontWeight: 700 },
-    h5: { fontWeight: 700 },
-    h6: { fontWeight: 700 },
-    button: { textTransform: 'none', fontWeight: 700 },
+    fontFamily: textFontFamily,
+    h1: { fontFamily: displayFontFamily, fontWeight: 700 },
+    h2: { fontFamily: displayFontFamily, fontWeight: 700 },
+    h3: { fontFamily: displayFontFamily, fontWeight: 700 },
+    h4: { fontFamily: displayFontFamily, fontWeight: 700 },
+    h5: { fontFamily: displayFontFamily, fontWeight: 700 },
+    h6: { fontFamily: displayFontFamily, fontWeight: 700 },
+    button: { textTransform: 'none', fontWeight: 600 },
   },
   components: {
     MuiButton: { defaultProps: { disableElevation: true } },
