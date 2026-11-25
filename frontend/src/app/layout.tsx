@@ -1,14 +1,24 @@
 import type { Metadata, Viewport } from 'next';
-import { Nunito } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { config } from '@/lib/config';
 import { brand } from '@/theme/brand';
 import { Providers } from './providers';
 
-const brandFont = Nunito({
-  // latin-ext carries U+20A1 (₡); the plain latin subset does not, so ₡ would fall back to a system font.
+// latin-ext carries U+20A1 (₡); the plain latin subset does not, so ₡ would fall back to a system font.
+/** Display: headlines and logotype. */
+const displayFont = Space_Grotesk({
   subsets: ['latin', 'latin-ext'],
-  variable: '--font-brand',
+  weight: ['500', '700'],
+  variable: '--font-display',
+  display: 'swap',
+});
+
+/** Text: body copy and details. */
+const textFont = Inter({
+  subsets: ['latin', 'latin-ext'],
+  weight: ['400', '500', '600'],
+  variable: '--font-text',
   display: 'swap',
 });
 
@@ -32,7 +42,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="es" className={brandFont.variable}>
+    <html lang="es" className={`${displayFont.variable} ${textFont.variable}`}>
       <body>
         <Providers>{children}</Providers>
       </body>

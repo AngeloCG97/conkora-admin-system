@@ -41,11 +41,22 @@ export function DualAmount({
   const lines = dualAmountLines(currency, amount ?? usd, { usd, crc });
   return (
     <Box sx={{ textAlign: align, minWidth: 0, ...sx }}>
-      <Typography variant={variant} component={component ?? 'p'} sx={{ fontWeight, color }}>
+      <Typography variant={variant} component={component ?? 'p'} sx={{
+          fontWeight,
+          color,
+          // Amounts stay in the text font (Inter) even with heading variants, with aligned digits.
+          fontFamily: (t) => t.typography.fontFamily,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
         {label ? `${label} ` : ''}
         {lines.primary}
       </Typography>
-      <Typography variant="caption" color="text.secondary" component="p" sx={{ lineHeight: 1.3 }}>
+      <Typography
+        variant="caption"
+        color="text.secondary"
+        component="p"
+        sx={{ lineHeight: 1.3, fontVariantNumeric: 'tabular-nums' }}
+      >
         {lines.secondary}
       </Typography>
     </Box>

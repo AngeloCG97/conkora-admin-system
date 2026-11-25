@@ -13,7 +13,7 @@ describe('routeRequest', () => {
     `${ORIGIN}${BASE}/viajes/`,
     `${ORIGIN}${BASE}/viajes/detalle/?id=abc`,
     `${ORIGIN}${BASE}/_next/static/chunks/app.js`,
-    `${ORIGIN}${BASE}/_next/static/media/nunito.woff2`,
+    `${ORIGIN}${BASE}/_next/static/media/inter.woff2`,
     `${ORIGIN}${BASE}/icons/icon-192.png`,
     `${ORIGIN}${BASE}/manifest.webmanifest`,
   ])('caches same-origin static file %s', (url) => {
