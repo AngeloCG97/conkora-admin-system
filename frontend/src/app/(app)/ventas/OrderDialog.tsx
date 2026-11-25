@@ -56,7 +56,7 @@ const UPDATE_ORDER = `mutation UpdateOrder($id: uuid!, $set: order_set_input!) {
 const NO_TRIP = '';
 
 /**
- * Create (no `order`) or edit (with `order`) a Pedido. A new Pedido opens its detail page to add Artículos.
+ * Create (no `order`) or edit (with `order`) a Venta. A new Venta opens its detail page to add Artículos.
  * Mount with a `key` to reset state.
  */
 export function OrderDialog({
@@ -69,11 +69,11 @@ export function OrderDialog({
 }: {
   order?: Order;
   options: OrderOptions;
-  /** Cliente of a new Pedido started from that Cliente's page (the select is locked). */
+  /** Cliente of a new Venta started from that Cliente's page (the select is locked). */
   fixedCustomerId?: string;
-  /** Cliente preselected (but changeable) for a new Pedido, e.g. the one being filtered. */
+  /** Cliente preselected (but changeable) for a new Venta, e.g. the one being filtered. */
   defaultCustomerId?: string;
-  /** Viaje preselected for a new Pedido (e.g. the one being filtered). */
+  /** Viaje preselected for a new Venta (e.g. the one being filtered). */
   defaultTripId?: string;
   onClose: () => void;
 }) {
@@ -115,7 +115,7 @@ export function OrderDialog({
       qc.invalidateQueries({ queryKey: ['orders'] });
       qc.invalidateQueries({ queryKey: ['order'] });
       onClose();
-      if (!order) router.push(`/pedidos/detalle/?id=${id}`);
+      if (!order) router.push(`/ventas/detalle/?id=${id}`);
     },
     onError: () => notify.error('No se pudo guardar la Venta'),
   });

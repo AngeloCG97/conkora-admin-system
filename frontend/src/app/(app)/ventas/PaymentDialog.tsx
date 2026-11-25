@@ -41,8 +41,8 @@ const UPDATE_PAYMENT = `mutation UpdatePayment($id: uuid!, $set: payment_set_inp
 const DELETE_PAYMENT = `mutation DeletePayment($id: uuid!) { delete_payment_by_pk(id: $id) { id } }`;
 
 /**
- * Create (no `payment`) or edit/delete (with `payment`) an Abono of a Pedido. The Abono keeps its own currency
- * (default: the Pedido's); `order_summary` converts it. Mount with a `key` to reset state.
+ * Create (no `payment`) or edit/delete (with `payment`) an Abono of a Venta. The Abono keeps its own currency
+ * (default: the Venta's); `order_summary` converts it. Mount with a `key` to reset state.
  */
 export function PaymentDialog({
   orderId,

@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
-import { ItemPhoto } from '@/app/(app)/pedidos/ItemPhoto';
+import { ItemPhoto } from '@/app/(app)/ventas/ItemPhoto';
 import { Loading } from '@/components/feedback/Loading';
 import { Logo } from '@/components/layout/Logo';
 import { DualAmount } from '@/components/money/DualAmount';

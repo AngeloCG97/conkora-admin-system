@@ -3,7 +3,7 @@ import { isShareTokenFormat, type PublicOrderStore } from '../public/order-dto.t
 import { clientIp, createRateLimiter } from '../public/rate-limit.ts';
 
 /**
- * The only public endpoint with business data (issue #35): a Pedido's page for its Cliente, looked up by
+ * The only public endpoint with business data (issue #35): a Venta's page for its Cliente, looked up by
  * the secret token of its link. No JWT; Hapi queries Hasura with the admin secret using a fixed query and
  * answers only the curated DTO. Invalid, unknown, revoked or Cancelado → the same 404 every time.
  */

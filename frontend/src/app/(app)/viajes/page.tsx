@@ -22,7 +22,7 @@ const TRIPS_QUERY = `query Trips {
   trip(order_by: [{ start_date: desc }]) { ${TRIP_FIELDS} }
 }`;
 
-// Separate query under ['orders', ...] so Pedido/Abono/Gasto changes refresh the figures.
+// Separate query under ['orders', ...] so Venta/Abono/Gasto changes refresh the figures.
 const SUMMARIES_QUERY = `query TripSummaries {
   trip { id summary { income_usd expenses_usd profit_usd income_crc expenses_crc profit_crc } }
 }`;

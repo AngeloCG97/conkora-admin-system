@@ -8,7 +8,7 @@ const summary = async (db: Parameters<Parameters<typeof withRollback>[0]>[0], tr
   (await db.query('SELECT trip_id, order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd, personal_expenses_usd, business_expenses_usd FROM trip_summary WHERE trip_id = $1', [tripId])).rows[0];
 
 describe('trip_summary and trip_expense_category_summary', () => {
-  it('Viaje sin Pedidos ni Gastos da todo en 0', () => withRollback(async (db) => {
+  it('Viaje sin Ventas ni Gastos da todo en 0', () => withRollback(async (db) => {
     const tripId = await insertTrip(db);
     expect(await summary(db, tripId)).toEqual({
       trip_id: tripId, order_count: 0, income_usd: 0, collected_usd: 0, pending_usd: 0, expenses_usd: 0, profit_usd: 0,
@@ -33,7 +33,7 @@ describe('trip_summary and trip_expense_category_summary', () => {
     const x = await insertOrder(db, { customerId, tripId, status: 'cancelled' });
     await insertOrderItem(db, { orderId: x, price: 999 });
     await insertPayment(db, { orderId: x, amount: 500 });
-    // Pedido General: no entra al Viaje
+    // Venta General: no entra al Viaje
     const p = await insertOrder(db, { customerId });
     await insertOrderItem(db, { orderId: p, price: 777 });
 

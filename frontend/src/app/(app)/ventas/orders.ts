@@ -1,4 +1,4 @@
-/** Pure helpers for the Pedidos screens (unit tested in orders.test.ts). */
+/** Pure helpers for the Ventas screens (unit tested in orders.test.ts). */
 import { parseAmount, type TripFilter } from '../gastos/expenses';
 
 export interface OrderFilters {
@@ -9,7 +9,7 @@ export interface OrderFilters {
   status: string | null;
 }
 
-/** Hasura `where` for the Pedidos list filters. */
+/** Hasura `where` for the Ventas list filters. */
 export function orderWhere({ trip, customerId, status }: OrderFilters): Record<string, unknown> {
   const where: Record<string, unknown> = {};
   if (trip.kind === 'general') where.trip_id = { _is_null: true };
@@ -36,8 +36,8 @@ export function parsePaymentAmount(text: string): number | null {
 export type PaymentState = 'paid' | 'pending' | null;
 
 /**
- * Payment indicator of a Pedido, derived from the Saldo computed by `order_summary` (never set by hand):
- * "Pagado" when `is_paid`, "Saldo pendiente" while the Saldo is positive, nothing for a Cancelado or an empty Pedido.
+ * Payment indicator of a Venta, derived from the Saldo computed by `order_summary` (never set by hand):
+ * "Pagado" when `is_paid`, "Saldo pendiente" while the Saldo is positive, nothing for a Cancelado or an empty Venta.
  */
 export function paymentState(status: string, summary: { balance: number; is_paid: boolean } | null): PaymentState {
   if (status === 'cancelled' || !summary) return null;

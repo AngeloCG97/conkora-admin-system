@@ -33,7 +33,7 @@ import { PAYMENT_FIELDS, PaymentDialog, type Payment } from '../PaymentDialog';
 import { ShareOrder } from '../ShareOrder';
 import { NO_TRIP_LABEL } from '@/lib/terms';
 
-/** ₡ and $ (and, for Artículos, Pedido-currency) amounts from `order_item_summary` / `payment_summary`. */
+/** ₡ and $ (and, for Artículos, Venta-currency) amounts from `order_item_summary` / `payment_summary`. */
 type ItemRow = OrderItem & { summary: { line_total: number; line_total_usd: number; line_total_crc: number } | null };
 type PaymentRow = Payment & { summary: { amount_usd: number; amount_crc: number } | null };
 type OrderDetail = OrderRow & { items: ItemRow[]; payments: PaymentRow[] };
@@ -52,7 +52,7 @@ const UPDATE_STATUS = `mutation UpdateOrderStatus($id: uuid!, $status: order_sta
 
 const DELETE_ORDER = `mutation DeleteOrder($id: uuid!) { delete_order_by_pk(id: $id) { id } }`;
 
-/** One line of the Total / Abono / Saldo block: amount in the Pedido's currency, then its ₡ / $ equivalents. */
+/** One line of the Total / Abono / Saldo block: amount in the Venta's currency, then its ₡ / $ equivalents. */
 function AmountLine({
   label,
   amount,
@@ -119,7 +119,7 @@ function OrderDetailView({ id }: { id: string }) {
       qc.removeQueries({ queryKey: ['order', id] });
       qc.removeQueries({ queryKey: ['order-share', id] });
       qc.invalidateQueries({ queryKey: ['orders'] });
-      router.push('/pedidos/');
+      router.push('/ventas/');
     },
     onError: () => notify.error('No se pudo eliminar'),
   });
@@ -143,7 +143,7 @@ function OrderDetailView({ id }: { id: string }) {
     return (
       <>
         <PageHeader title="Venta no encontrada" />
-        <Button component={Link} href="/pedidos/" startIcon={<ArrowBackIcon />}>
+        <Button component={Link} href="/ventas/" startIcon={<ArrowBackIcon />}>
           Volver a Ventas
         </Button>
       </>
@@ -167,7 +167,7 @@ function OrderDetailView({ id }: { id: string }) {
           </Stack>
         }
       />
-      <Button component={Link} href="/pedidos/" startIcon={<ArrowBackIcon />} sx={{ mb: 2, mt: -2 }}>
+      <Button component={Link} href="/ventas/" startIcon={<ArrowBackIcon />} sx={{ mb: 2, mt: -2 }}>
         Ventas
       </Button>
 

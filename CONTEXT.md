@@ -25,7 +25,7 @@ Persona que compra a ConKora.
 
 **Venta**
 Compra de un Cliente, compuesta por Artículos, en una sola moneda. Pertenece a un Viaje o es General. Tiene un estado: Pendiente, Entregado o Cancelado. Una Venta Cancelada no cuenta en Total, Ingreso ni Saldo. Un Cliente puede tener muchas Ventas en distintos Viajes.
-_Evitar_: pedido (nombre anterior en la interfaz, renombrado a Venta; el código, las tablas y las rutas /pedidos/ conservan el nombre order/pedido), orden, compra (como sustantivo del modelo).
+_Evitar_: pedido (nombre anterior en la interfaz, renombrado a Venta; las rutas son /ventas/ y la página pública /venta/; el código y las tablas conservan el nombre `order`), orden, compra (como sustantivo del modelo).
 
 **Artículo**
 Línea de una Venta: nombre, precio, y opcionalmente foto y talla.

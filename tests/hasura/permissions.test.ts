@@ -329,11 +329,11 @@ describe('order, order_item, order_status and order_summary', () => {
     await asAdmin(`mutation {
       delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
       delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
-      delete_trip(where: { name: { _eq: "Viaje con Pedidos" } }) { affected_rows }
+      delete_trip(where: { name: { _eq: "Viaje con Ventas" } }) { affected_rows }
     }`);
   });
 
-  it('manager does CRUD on Pedidos and Artículos and reads the Total through summary', async () => {
+  it('manager does CRUD on Ventas and Artículos and reads the Total through summary', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql<{ insert_order_one: { id: string; items: { id: string }[] } }>(
       `mutation { insert_order_one(object: {
@@ -398,12 +398,12 @@ describe('order, order_item, order_status and order_summary', () => {
     expect(qty.errors?.[0]?.message).toMatch(/order_item_quantity_check/);
   });
 
-  it('a Cliente or a Viaje with Pedidos cannot be deleted', async () => {
+  it('a Cliente or a Viaje with Ventas cannot be deleted', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql<{ insert_order_one: { id: string; customer_id: string; trip_id: string } }>(
       `mutation { insert_order_one(object: {
         customer: { data: { name: "${NAME}" } },
-        trip: { data: { name: "Viaje con Pedidos", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02" } },
+        trip: { data: { name: "Viaje con Ventas", destination: "X", start_date: "2026-02-01", end_date: "2026-02-02" } },
         currency_code: "USD", date: "2026-02-01"
       }) { id customer_id trip_id } }`,
       { auth },
@@ -488,7 +488,7 @@ describe('payment and order_summary Abono/Saldo', () => {
     }
   });
 
-  it('deleting a Pedido deletes its Abonos', async () => {
+  it('deleting a Venta deletes its Abonos', async () => {
     const token = await signTestJwt();
     const orderId = await insertOrder(token);
     const ins = await graphql(
@@ -636,7 +636,7 @@ describe('CRC equivalents (*_crc), order_item_summary and payment_summary', () =
     }`);
   });
 
-  it('manager reads ₡ and $ of Pedidos, Artículos, Abonos and the Cliente account', async () => {
+  it('manager reads ₡ and $ of Ventas, Artículos, Abonos and the Cliente account', async () => {
     const auth = { token: await signTestJwt() };
     const ins = await graphql(
       `mutation { insert_order_one(object: {

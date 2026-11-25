@@ -41,7 +41,7 @@ const UPDATE_ITEM = `mutation UpdateOrderItem($id: uuid!, $set: order_item_set_i
 const DELETE_ITEM = `mutation DeleteOrderItem($id: uuid!) { delete_order_item_by_pk(id: $id) { id } }`;
 
 /**
- * Create (no `item`) or edit/delete (with `item`) an Artículo of a Pedido. The price is in the Pedido's
+ * Create (no `item`) or edit/delete (with `item`) an Artículo of a Venta. The price is in the Venta's
  * currency (`currencyCode`, shown only as a label). Mount with a `key` to reset state.
  */
 export function OrderItemDialog({

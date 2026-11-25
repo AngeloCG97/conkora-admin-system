@@ -20,7 +20,7 @@ const noTripCrc = async (db: Db) => (await db.query(`SELECT ${TRIP_CRC.join(', '
 
 const ZEROS = Object.fromEntries(TRIP_CRC.map((c) => [c, 0]));
 
-/** Empties every Viaje, Pedido and Gasto inside the rolled-back transaction. */
+/** Empties every Viaje, Venta and Gasto inside the rolled-back transaction. */
 async function clearAll(db: Db) {
   await db.query('DELETE FROM expense');
   await db.query('DELETE FROM "order"');
@@ -67,8 +67,8 @@ describe('Gastos: amount_crc', () => {
   }));
 });
 
-describe('Pedidos, Artículos y Abonos: *_crc', () => {
-  it('order_summary, order_item_summary y payment_summary dan ₡ y $ con las tasas del Viaje del Pedido', () =>
+describe('Ventas, Artículos y Abonos: *_crc', () => {
+  it('order_summary, order_item_summary y payment_summary dan ₡ y $ con las tasas del Viaje de la Venta', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       await setGlobalRate(db, 'EUR', 0.8);
@@ -108,7 +108,7 @@ describe('Pedidos, Artículos y Abonos: *_crc', () => {
       ]);
     }));
 
-  it('Pedido en CRC: total_crc es su Total exacto; Pedido sin Artículos da ceros', () => withRollback(async (db) => {
+  it('Venta en CRC: total_crc es su Total exacto; Venta sin Artículos da ceros', () => withRollback(async (db) => {
     const tripId = await insertTrip(db, { rates: { CRC: 512.345678 } });
     const customerId = await insertCustomer(db);
     const crcOrder = await insertOrder(db, { customerId, tripId, currency: 'CRC' });
@@ -203,7 +203,7 @@ describe('reportes: *_crc', () => {
       expect(cats).toEqual(perCategory);
     }));
 
-  it('Cuenta del Cliente y Utilidad global suman los ₡ de cada Pedido / reporte', () => withRollback(async (db) => {
+  it('Cuenta del Cliente y Utilidad global suman los ₡ de cada Venta / reporte', () => withRollback(async (db) => {
     await clearAll(db);
     await setGlobalRate(db, 'CRC', 500);
     const t1 = await insertTrip(db, { rates: { CRC: 520 } });

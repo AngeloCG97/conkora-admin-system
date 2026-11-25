@@ -21,8 +21,8 @@ async function balance(db: pg.PoolClient, orderId: string): Promise<Balance> {
   return rows[0];
 }
 
-describe('order_summary (Abono and Saldo of each Pedido)', () => {
-  it('a Pedido without Artículos nor Abonos has Total, Abono and Saldo 0, not null', () =>
+describe('order_summary (Abono and Saldo of each Venta)', () => {
+  it('a Venta without Artículos nor Abonos has Total, Abono and Saldo 0, not null', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db), currency: 'CRC' });
       expect(await balance(db, orderId)).toEqual({
@@ -30,7 +30,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       });
     }));
 
-  it('a Pedido without Abonos has Abono 0 and Saldo = Total', () =>
+  it('a Venta without Abonos has Abono 0 and Saldo = Total', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
       await insertOrderItem(db, { orderId, price: 40, quantity: 2 });
@@ -39,7 +39,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       });
     }));
 
-  it('a CRC Abono on a USD Pedido of a Viaje converts with the Viaje rate', () =>
+  it('a CRC Abono on a USD Venta of a Viaje converts with the Viaje rate', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 505);
       const tripId = await insertTrip(db, { rates: { CRC: 500 } });
@@ -52,7 +52,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       });
     }));
 
-  it('a USD Abono on a CRC Pedido of a Viaje multiplies by the Viaje rate of the Pedido currency', () =>
+  it('a USD Abono on a CRC Venta of a Viaje multiplies by the Viaje rate of the Venta currency', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 505);
       const tripId = await insertTrip(db, { rates: { CRC: 500 } });
@@ -75,7 +75,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect([b.paid, b.balance, b.paid_usd, b.balance_usd]).toEqual([40, 40, 50, 50]);
     }));
 
-  it('a General Pedido converts its Abonos with the global rate', () =>
+  it('a General Venta converts its Abonos with the global rate', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 520);
       await insertTrip(db, { rates: { CRC: 500 } }); // a Viaje rate must not leak into General
@@ -97,7 +97,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect((await balance(db, orderId)).balance).toBe(50);
     }));
 
-  it('changing the Viaje rate recalculates its Saldo; General Pedidos do not change', () =>
+  it('changing the Viaje rate recalculates its Saldo; General Ventas do not change', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 500);
       const customerId = await insertCustomer(db);
@@ -134,7 +134,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect(await balance(db, orderId)).toMatchObject({ paid: 6.02, balance: 3.98, paid_usd: 6.02, balance_usd: 3.98 });
     }));
 
-  it('rounds the Abono converted to a non-USD Pedido currency to 2 decimals', () =>
+  it('rounds the Abono converted to a non-USD Venta currency to 2 decimals', () =>
     withRollback(async (db) => {
       await setGlobalRate(db, 'CRC', 505.37);
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db), currency: 'CRC' });
@@ -143,7 +143,7 @@ describe('order_summary (Abono and Saldo of each Pedido)', () => {
       expect(await balance(db, orderId)).toMatchObject({ paid: 1682.88, balance: 8317.12 });
     }));
 
-  it('a fully paid Pedido is Pagado; overpaying gives a negative Saldo and stays Pagado', () =>
+  it('a fully paid Venta is Pagado; overpaying gives a negative Saldo and stays Pagado', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
       await insertOrderItem(db, { orderId, price: 30 });
@@ -175,7 +175,7 @@ describe('payment integrity', () => {
       await expect(insertPayment(db, { orderId, amount: 5, currency: 'XXX' })).rejects.toThrow(/payment_currency_code_fkey/);
     }));
 
-  it('deleting a Pedido deletes its Abonos', () =>
+  it('deleting a Venta deletes its Abonos', () =>
     withRollback(async (db) => {
       const orderId = await insertOrder(db, { customerId: await insertCustomer(db) });
       await insertPayment(db, { orderId, amount: 5 });

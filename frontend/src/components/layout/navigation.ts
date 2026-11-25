@@ -20,7 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: 'Viajes', href: '/viajes/', icon: FlightTakeoffIcon },
   { label: 'Gastos', href: '/gastos/', icon: ReceiptLongIcon },
   { label: 'Clientes', href: '/clientes/', icon: PeopleIcon },
-  { label: 'Ventas', href: '/pedidos/', icon: ShoppingBagIcon },
+  { label: 'Ventas', href: '/ventas/', icon: ShoppingBagIcon },
   { label: 'Reportes', href: '/reportes/', icon: AssessmentIcon },
   { label: 'Monedas', href: '/monedas/', icon: AttachMoneyIcon },
 ];

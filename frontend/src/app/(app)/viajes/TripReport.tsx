@@ -97,7 +97,7 @@ export function Figure({
   );
 }
 
-// Key under ['orders', ...] so any Pedido/Abono change refreshes it (see conventions).
+// Key under ['orders', ...] so any Venta/Abono change refreshes it (see conventions).
 export function TripReport({ tripId }: { tripId: string }) {
   const { data, isPending } = useQuery({
     queryKey: ['orders', 'trip-report', tripId],

@@ -1,10 +1,10 @@
 import type { HasuraRequest } from '../hasura.ts';
 
 /**
- * Public view of a Pedido (issue #35): the only data anyone can read without a session.
+ * Public view of a Venta (issue #35): the only data anyone can read without a session.
  * Every field is picked explicitly from the Hasura row — never spread a row into the DTO — so a new column
  * in the query or the database can never leak. Not included on purpose: ids, Cliente phone/email/notes,
- * Pedido/Abono notes, exchange rates, Gastos, other Pedidos.
+ * Venta/Abono notes, exchange rates, Gastos, other Ventas.
  */
 
 /** Tokens are 24 random bytes as lowercase hex (column default in migration `create_order_share`). */
@@ -34,7 +34,7 @@ export interface PublicPayment {
   date: string;
   amount: number;
   currency: PublicCurrency;
-  /** The Abono converted to the Pedido's currency. */
+  /** The Abono converted to the Venta's currency. */
   orderAmount: number;
   amountUsd: number;
   amountCrc: number;
@@ -126,7 +126,7 @@ export const CANCELLED_STATUS = 'cancelled';
 
 const currencyDto = (c: PublicCurrency): PublicCurrency => ({ code: c.code, symbol: c.symbol });
 
-/** Maps a Hasura row to the public DTO; null when the Pedido must not be shown (Cancelado). */
+/** Maps a Hasura row to the public DTO; null when the Venta must not be shown (Cancelado). */
 export function toPublicOrder(row: PublicOrderRow, statusLabels: Record<string, string>): PublicOrder | null {
   if (row.status === CANCELLED_STATUS) return null;
   const s = row.summary;

@@ -54,7 +54,7 @@ export async function insertCustomer(db: pg.PoolClient, { name = 'Cliente', phon
   return customer.id;
 }
 
-/** Inserts a Pedido. `tripId` null/omitted = General. Add Artículos with `insertOrderItem`. */
+/** Inserts a Venta. `tripId` null/omitted = General. Add Artículos with `insertOrderItem`. */
 export async function insertOrder(
   db: pg.PoolClient,
   {
@@ -72,7 +72,7 @@ export async function insertOrder(
   return order.id;
 }
 
-/** Inserts a Artículo of a Pedido (price in the Pedido's currency). */
+/** Inserts a Artículo of a Venta (price in the Venta's currency). */
 export async function insertOrderItem(
   db: pg.PoolClient,
   { orderId, price, quantity = 1, name = 'Artículo' }: { orderId: string; price: number; quantity?: number; name?: string },
@@ -84,7 +84,7 @@ export async function insertOrderItem(
   return item.id;
 }
 
-/** Inserts an Abono of a Pedido, in its own currency (converted to the Pedido's currency by `order_summary`). */
+/** Inserts an Abono of a Venta, in its own currency (converted to the Venta's currency by `order_summary`). */
 export async function insertPayment(
   db: pg.PoolClient,
   { orderId, amount, currency = 'USD' }: { orderId: string; amount: number; currency?: string },

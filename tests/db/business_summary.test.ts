@@ -22,7 +22,7 @@ async function sumOfReports(db: Db) {
   );
 }
 
-/** Empties every Viaje, Pedido and Gasto inside the rolled-back transaction. */
+/** Empties every Viaje, Venta and Gasto inside the rolled-back transaction. */
 async function clearAll(db: Db) {
   await db.query('DELETE FROM expense');
   await db.query('DELETE FROM "order"');
