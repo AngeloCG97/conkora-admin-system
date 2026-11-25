@@ -4,7 +4,7 @@ import { assetPath } from '@/lib/config';
 /**
  * ConKora wordmark (public/logo-conkora.svg): "con kora" in Space Grotesk outlines, with the "o" of
  * "kora" drawn as a coral heart. Wide (~6:1), so it shrinks to fit its container instead of overflowing.
- * PWA icons are still generated from public/logo-tinta.svg (`npm run icons`).
+ * PWA icons come from the heart of this logo (public/icon-corazon*.svg, `npm run icons`).
  */
 export function Logo({ height = 40 }: { height?: number }) {
   return (
