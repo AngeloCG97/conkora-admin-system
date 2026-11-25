@@ -54,7 +54,7 @@ function OrderView({ order }: { order: PublicOrder }) {
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5" component="h1" sx={{ overflowWrap: 'anywhere' }}>
-          Pedido de {order.customerName}
+          Venta de {order.customerName}
         </Typography>
         <Typography color="text.secondary">
           {formatDate(order.date)}
@@ -82,7 +82,7 @@ function OrderView({ order }: { order: PublicOrder }) {
       <Box component="section">
         <Typography variant="h6" component="h2" sx={{ mb: 1.5 }}>Artículos</Typography>
         {order.items.length === 0 ? (
-          <Typography color="text.secondary">Este Pedido todavía no tiene Artículos.</Typography>
+          <Typography color="text.secondary">Esta Venta todavía no tiene Artículos.</Typography>
         ) : (
           <Stack spacing={1.5}>
             {order.items.map((item, index) => (
@@ -118,7 +118,7 @@ function OrderView({ order }: { order: PublicOrder }) {
                     <DualAmount amount={payment.amount} currency={payment.currency} usd={payment.amountUsd} crc={payment.amountCrc} align="right" />
                     {payment.currency.code !== order.currency.code && (
                       <Typography variant="caption" color="text.secondary" component="p">
-                        = {formatMoney(payment.orderAmount, order.currency)} del Pedido
+                        = {formatMoney(payment.orderAmount, order.currency)} de la Venta
                       </Typography>
                     )}
                   </Box>
@@ -161,7 +161,7 @@ function PublicOrderContent({ token }: { token: string }) {
         <LinearProgress sx={{ mt: 1.5 }} />
       </Alert>
     ) : (
-      <Loading message="Cargando tu Pedido…" />
+      <Loading message="Cargando tu Venta…" />
     );
   }
   if (result.kind === 'ok') return <OrderView order={result.order} />;
@@ -172,7 +172,7 @@ function Unavailable({ kind }: { kind: 'not-found' | 'rate-limited' | 'error' })
   const message = {
     'not-found': 'Este enlace no es válido o ya no está activo. Pide a ConKora un enlace nuevo.',
     'rate-limited': 'Demasiadas visitas seguidas. Espera un minuto y vuelve a cargar la página.',
-    error: 'No pudimos cargar el Pedido. Intenta de nuevo en un momento.',
+    error: 'No pudimos cargar la Venta. Intenta de nuevo en un momento.',
   }[kind];
   return <Alert severity={kind === 'not-found' ? 'warning' : 'error'}>{message}</Alert>;
 }

@@ -174,7 +174,7 @@ health check en `/health`, carpeta `backend/`, se redespliega con cada commit en
    | `CLOUDINARY_API_SECRET` | la API Secret |
 
    `NODE_VERSION`, `NODE_ENV`, `TRUSTED_PROXY_HOPS` (`1`: el proxy de Render, para el límite de peticiones de
-   la página pública del Pedido) y `PORT` ya vienen dados; no los toques.
+   la página pública de la Venta) y `PORT` ya vienen dados; no los toques.
 6. **Deploy Blueprint** (o **Apply**). Render instala dependencias y arranca.
 7. Abre el servicio `conkora-api` y copia su URL (arriba, debajo del nombre), p. ej.
    `https://conkora-api.onrender.com`. Guárdala como **`NEXT_PUBLIC_API_URL`** (sin `/` final).

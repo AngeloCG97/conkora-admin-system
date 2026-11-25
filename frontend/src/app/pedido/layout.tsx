@@ -6,8 +6,8 @@ import type { ReactNode } from 'react';
  * no menu. The URL carries a secret token: never indexed, and no Referer is sent to photos or other hosts.
  */
 export const metadata: Metadata = {
-  title: 'Tu Pedido · ConKora',
-  description: 'Detalle de tu Pedido en ConKora',
+  title: 'Tu Venta · ConKora',
+  description: 'Detalle de tu Venta en ConKora',
   robots: { index: false, follow: false, nocache: true, googleBot: { index: false, follow: false } },
   referrer: 'no-referrer',
 };

@@ -92,7 +92,7 @@ function CustomerDetail({ id }: { id: string }) {
     onError: (e) =>
       notify.error(
         e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-          ? 'No se puede eliminar: el Cliente tiene Pedidos'
+          ? 'No se puede eliminar: el Cliente tiene Ventas'
           : 'No se pudo eliminar',
       ),
   });
@@ -156,7 +156,7 @@ function CustomerDetail({ id }: { id: string }) {
       <Card variant="outlined">
         <CardContent>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-            Total de {account.data?.customer_by_pk?.summary?.order_count ?? 0} Pedidos (sin Cancelados)
+            Total de {account.data?.customer_by_pk?.summary?.order_count ?? 0} Ventas (sin Cancelados)
           </Typography>
           <AccountFigures summary={account.data?.customer_by_pk?.summary ?? null} />
         </CardContent>
@@ -168,7 +168,7 @@ function CustomerDetail({ id }: { id: string }) {
               <CardContent>
                 <Typography sx={{ fontWeight: 600, overflowWrap: 'anywhere' }}>{g.trip?.name ?? NO_TRIP_LABEL}</Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                  {g.order_count} {g.order_count === 1 ? 'Pedido' : 'Pedidos'}
+                  {g.order_count} {g.order_count === 1 ? 'Venta' : 'Ventas'}
                 </Typography>
                 <AccountFigures summary={g} />
               </CardContent>
@@ -179,16 +179,16 @@ function CustomerDetail({ id }: { id: string }) {
 
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 1.5 }}>
         <Typography variant="h6" component="h2">
-          Pedidos
+          Ventas
         </Typography>
         <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setCreatingOrder(true)} disabled={!options.data}>
-          Nuevo Pedido
+          Nueva Venta
         </Button>
       </Stack>
       {orders.isPending ? (
         <Loading />
       ) : orders.data?.order.length === 0 ? (
-        <Typography color="text.secondary">Este Cliente todavía no tiene Pedidos.</Typography>
+        <Typography color="text.secondary">Este Cliente todavía no tiene Ventas.</Typography>
       ) : (
         <Stack spacing={1.5}>
           {orders.data?.order.map((o) => (

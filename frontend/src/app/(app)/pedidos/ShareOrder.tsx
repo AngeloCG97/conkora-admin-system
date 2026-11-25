@@ -68,8 +68,8 @@ export function ShareOrder({ orderId, customerName, cancelled }: { orderId: stri
     try {
       const url = shareUrl(window.location.origin, config.basePath, await ensureToken());
       const outcome = await shareLink(navigator, {
-        title: 'Tu Pedido en ConKora',
-        text: `Hola ${customerName}, aquí puedes ver tu Pedido de ConKora:`,
+        title: 'Tu Venta en ConKora',
+        text: `Hola ${customerName}, aquí puedes ver tu Venta de ConKora:`,
         url,
       });
       if (outcome === 'copied') notify.success('Enlace copiado');
@@ -117,7 +117,7 @@ export function ShareOrder({ orderId, customerName, cancelled }: { orderId: stri
     if (
       await confirm({
         title: '¿Desactivar el enlace?',
-        message: 'El Cliente ya no podrá ver este Pedido con el enlace que le compartiste.',
+        message: 'El Cliente ya no podrá ver esta Venta con el enlace que le compartiste.',
         confirmText: 'Desactivar',
         danger: true,
       })
@@ -150,10 +150,10 @@ export function ShareOrder({ orderId, customerName, cancelled }: { orderId: stri
       </Stack>
       <Typography variant="body2" color="text.secondary">
         {cancelled
-          ? 'Los Pedidos cancelados no se pueden ver con el enlace.'
+          ? 'Las Ventas canceladas no se pueden ver con el enlace.'
           : token
-            ? 'Enlace activo: el Cliente ve este Pedido sin iniciar sesión.'
-            : 'Envía un enlace para que el Cliente vea su Pedido y su Saldo.'}
+            ? 'Enlace activo: el Cliente ve esta Venta sin iniciar sesión.'
+            : 'Envía un enlace para que el Cliente vea su Venta y su Saldo.'}
       </Typography>
     </Stack>
   );

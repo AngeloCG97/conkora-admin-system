@@ -110,7 +110,7 @@ export default function HomePage() {
             Todos los Viajes más lo {NO_TRIP_LABEL}, en $ y ₡ (Gastos personales incluidos).
           </Typography>
           <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
-            <Figure label={`Ingreso (${business.order_count} Pedidos)`} usd={business.income_usd} crc={business.income_crc} />
+            <Figure label={`Ingreso (${business.order_count} Ventas)`} usd={business.income_usd} crc={business.income_crc} />
             <Figure label="Gastos" usd={business.expenses_usd} crc={business.expenses_crc} />
             <Figure label="Gastos personales" usd={business.personal_expenses_usd} crc={business.personal_expenses_crc} />
             <Figure label="Utilidad" usd={business.profit_usd} crc={business.profit_crc} color={profitColor(business.profit_usd)} />
@@ -169,10 +169,10 @@ export default function HomePage() {
             {NO_TRIP_LABEL} (sin Viaje)
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Pedidos y Gastos que no pertenecen a ningún Viaje, en $ y ₡.
+            Ventas y Gastos que no pertenecen a ningún Viaje, en $ y ₡.
           </Typography>
           <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap' }}>
-            <Figure label={`Ingreso (${noTrip.order_count} Pedidos)`} usd={noTrip.income_usd} crc={noTrip.income_crc} />
+            <Figure label={`Ingreso (${noTrip.order_count} Ventas)`} usd={noTrip.income_usd} crc={noTrip.income_crc} />
             <Figure label="Gastos" usd={noTrip.expenses_usd} crc={noTrip.expenses_crc} />
             <Figure label="Saldo" usd={noTrip.pending_usd} crc={noTrip.pending_crc} />
           </Stack>
