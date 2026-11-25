@@ -2,6 +2,7 @@ import { hasuraAdminUserStore } from './auth/admin-users.ts';
 import { ensureInitialAdmin } from './auth/initial-admin.ts';
 import { loadConfig } from './config.ts';
 import { createHasuraAdminClient, waitForHasura } from './hasura.ts';
+import { hasuraPublicOrderStore } from './public/order-dto.ts';
 import { createServer } from './server.ts';
 
 async function main(): Promise<void> {
@@ -12,7 +13,7 @@ async function main(): Promise<void> {
   await waitForHasura(config.hasura.graphqlUrl);
   await ensureInitialAdmin(adminUsers, config.initialAdmin, console.log);
 
-  const server = createServer({ config, adminUsers });
+  const server = createServer({ config, adminUsers, publicOrders: hasuraPublicOrderStore(hasura) });
   await server.start();
   console.log(`API listening on ${server.info.uri}`);
 

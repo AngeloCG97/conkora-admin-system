@@ -173,7 +173,8 @@ health check en `/health`, carpeta `backend/`, se redespliega con cada commit en
    | `CLOUDINARY_API_KEY` | la API Key |
    | `CLOUDINARY_API_SECRET` | la API Secret |
 
-   `NODE_VERSION`, `NODE_ENV` y `PORT` ya vienen dados; no los toques.
+   `NODE_VERSION`, `NODE_ENV`, `TRUSTED_PROXY_HOPS` (`1`: el proxy de Render, para el límite de peticiones de
+   la página pública del Pedido) y `PORT` ya vienen dados; no los toques.
 6. **Deploy Blueprint** (o **Apply**). Render instala dependencias y arranca.
 7. Abre el servicio `conkora-api` y copia su URL (arriba, debajo del nombre), p. ej.
    `https://conkora-api.onrender.com`. Guárdala como **`NEXT_PUBLIC_API_URL`** (sin `/` final).
@@ -334,4 +335,5 @@ de `HASURA_GRAPHQL_JWT_SECRET`). Las sesiones abiertas se cierran y hay que volv
 | Usuario y contraseña del admin | — | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | — |
 | Duración de la sesión (`43200`) | — | `JWT_EXPIRES_IN_SECONDS` | — |
 | Credenciales de Cloudinary | — | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | — |
+| Proxies delante de Hapi (`1`, ya en `render.yaml`) | — | `TRUSTED_PROXY_HOPS` | — |
 | `false` | `HASURA_GRAPHQL_DEV_MODE`, `HASURA_GRAPHQL_ENABLE_CONSOLE` | — | — |

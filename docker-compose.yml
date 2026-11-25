@@ -62,6 +62,9 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      # Like Render (one proxy appends X-Forwarded-For): lets integration tests act as distinct client IPs
+      # for the rate limit of GET /public/orders/{token}.
+      TRUSTED_PROXY_HOPS: ${TRUSTED_PROXY_HOPS:-1}
     ports:
       - "${API_PORT:-4000}:4000"
 

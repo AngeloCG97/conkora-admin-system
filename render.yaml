@@ -20,6 +20,9 @@ services:
         value: "24"
       - key: NODE_ENV
         value: production
+      # Render's proxy appends the client IP to X-Forwarded-For; the public Pedido page rate-limits by it.
+      - key: TRUSTED_PROXY_HOPS
+        value: "1"
       # Secrets and per-deployment values: Render asks for them when the Blueprint is created.
       - key: JWT_SECRET
         sync: false

@@ -21,6 +21,8 @@ export interface Config {
   };
   /** Photos of Artículos; null when the three CLOUDINARY_* variables are not all set. */
   cloudinary: CloudinaryConfig | null;
+  /** Reverse proxies in front of Hapi that append to X-Forwarded-For (Render: 1); 0 ignores the header. */
+  trustedProxyHops: number;
 }
 
 const MIN_JWT_SECRET_LENGTH = 32;
@@ -37,6 +39,16 @@ function positiveInt(env: NodeJS.ProcessEnv, name: string, fallback: number): nu
   const value = Number(raw);
   if (!Number.isInteger(value) || value <= 0) {
     throw new Error(`Environment variable ${name} must be a positive integer`);
+  }
+  return value;
+}
+
+function nonNegativeInt(env: NodeJS.ProcessEnv, name: string, fallback: number): number {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`Environment variable ${name} must be a non-negative integer`);
   }
   return value;
 }
@@ -74,5 +86,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       password: required(env, 'ADMIN_PASSWORD'),
     },
     cloudinary: loadCloudinary(env),
+    trustedProxyHops: nonNegativeInt(env, 'TRUSTED_PROXY_HOPS', 0),
   };
 }
