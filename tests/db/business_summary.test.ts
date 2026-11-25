@@ -5,7 +5,7 @@ import {
 } from '../helpers/fixtures.ts';
 
 type Db = Parameters<Parameters<typeof withRollback>[0]>[0];
-const business = async (db: Db) => (await db.query('SELECT * FROM business_summary')).rows;
+const business = async (db: Db) => (await db.query(`SELECT ${COLUMNS.join(', ')} FROM business_summary`)).rows;
 
 const COLUMNS = [
   'order_count', 'income_usd', 'collected_usd', 'pending_usd',

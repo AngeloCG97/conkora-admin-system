@@ -1,0 +1,17 @@
+# View (read-only): each Abono in the Pedido's currency, USD and CRC (rates of the Pedido's Viaje).
+table:
+  name: payment_summary
+  schema: public
+object_relationships:
+  - name: payment
+    using:
+      manual_configuration:
+        remote_table: { name: payment, schema: public }
+        column_mapping: { payment_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [payment_id, order_id, trip_id, currency_code, rate, order_currency_code, order_amount, amount_usd, amount_crc]
+      filter: {}
+      allow_aggregations: true

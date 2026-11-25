@@ -1,10 +1,10 @@
-# View (read-only): one row with the Utilidad global in USD = every Viaje + General (trip_summary + no_trip_summary; Cancelados excluded; 0s when empty).
+# View (read-only): one row with the Utilidad global in USD and CRC = every Viaje + General (trip_summary + no_trip_summary; Cancelados excluded; 0s when empty).
 table:
   name: business_summary
   schema: public
 select_permissions:
   - role: manager
     permission:
-      columns: [order_count, income_usd, collected_usd, pending_usd, expenses_usd, personal_expenses_usd, business_expenses_usd, profit_usd]
+      columns: [order_count, income_usd, collected_usd, pending_usd, expenses_usd, personal_expenses_usd, business_expenses_usd, profit_usd, income_crc, collected_crc, pending_crc, expenses_crc, personal_expenses_crc, business_expenses_crc, profit_crc]
       filter: {}
       allow_aggregations: true

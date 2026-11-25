@@ -16,13 +16,13 @@ import { Loading } from '@/components/feedback/Loading';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { gqlRequest } from '@/lib/graphql';
 import { CUSTOMER_FIELDS, CustomerDialog, type Customer } from './CustomerDialog';
-import { AccountFigures, type AccountSummary } from './AccountFigures';
+import { ACCOUNT_SUMMARY_FIELDS, AccountFigures, type AccountSummary } from './AccountFigures';
 import { customerOrderBy, customerWhere, type CustomerSort } from './customers';
 
 const CUSTOMERS_QUERY = `query Customers($where: customer_bool_exp!, $orderBy: [customer_order_by!]) {
   customer(where: $where, order_by: $orderBy) {
     ${CUSTOMER_FIELDS}
-    summary { order_count total_usd paid_usd balance_usd }
+    summary { ${ACCOUNT_SUMMARY_FIELDS} }
   }
 }`;
 

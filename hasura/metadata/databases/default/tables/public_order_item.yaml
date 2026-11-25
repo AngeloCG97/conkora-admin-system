@@ -5,6 +5,12 @@ object_relationships:
   - name: order
     using:
       foreign_key_constraint_on: order_id
+  - name: summary
+    using:
+      manual_configuration:
+        remote_table: { name: order_item_summary, schema: public }
+        column_mapping: { id: order_item_id }
+        insertion_order: null
 select_permissions:
   - role: manager
     permission:

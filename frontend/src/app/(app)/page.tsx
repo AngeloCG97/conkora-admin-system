@@ -12,7 +12,8 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { formatDateRange } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { NO_TRIP_LABEL } from '@/lib/terms';
-import { money, profitColor, type TripSummary } from './viajes/TripReport';
+import { DualAmount } from '@/components/money/DualAmount';
+import { Figure as ReportFigure, profitColor, type TripSummary } from './viajes/TripReport';
 
 const RECENT_TRIPS = 5;
 
@@ -22,48 +23,53 @@ interface RecentTrip {
   destination: string;
   start_date: string;
   end_date: string;
-  summary: Pick<TripSummary, 'income_usd' | 'expenses_usd' | 'profit_usd'> | null;
+  summary: Pick<TripSummary, 'income_usd' | 'expenses_usd' | 'profit_usd' | 'profit_crc'> | null;
 }
 
 interface DashboardData {
-  customer_summary_aggregate: { aggregate: { sum: { balance_usd: number | null } | null } };
+  customer_summary_aggregate: { aggregate: { sum: { balance_usd: number | null; balance_crc: number | null } | null } };
   trip: RecentTrip[];
-  no_trip_summary: Pick<TripSummary, 'order_count' | 'income_usd' | 'expenses_usd' | 'pending_usd'>[];
-  business_summary: Pick<TripSummary, 'order_count' | 'income_usd' | 'expenses_usd' | 'personal_expenses_usd' | 'profit_usd'>[];
+  no_trip_summary: Pick<
+    TripSummary,
+    'order_count' | 'income_usd' | 'expenses_usd' | 'pending_usd' | 'income_crc' | 'expenses_crc' | 'pending_crc'
+  >[];
+  business_summary: Pick<
+    TripSummary,
+    | 'order_count'
+    | 'income_usd'
+    | 'expenses_usd'
+    | 'personal_expenses_usd'
+    | 'profit_usd'
+    | 'income_crc'
+    | 'expenses_crc'
+    | 'personal_expenses_crc'
+    | 'profit_crc'
+  >[];
 }
 
 // Everything (Utilidad global, Saldo, recent Viajes, General summary) comes from SQL views; the frontend only displays.
 const DASHBOARD_QUERY = `query Dashboard {
-  customer_summary_aggregate { aggregate { sum { balance_usd } } }
+  customer_summary_aggregate { aggregate { sum { balance_usd balance_crc } } }
   trip(order_by: [{ start_date: desc }], limit: ${RECENT_TRIPS}) {
     id name destination start_date end_date
-    summary { income_usd expenses_usd profit_usd }
+    summary { income_usd expenses_usd profit_usd profit_crc }
   }
-  no_trip_summary { order_count income_usd expenses_usd pending_usd }
-  business_summary { order_count income_usd expenses_usd personal_expenses_usd profit_usd }
+  no_trip_summary { order_count income_usd expenses_usd pending_usd income_crc expenses_crc pending_crc }
+  business_summary {
+    order_count income_usd expenses_usd personal_expenses_usd profit_usd income_crc expenses_crc personal_expenses_crc profit_crc
+  }
 }`;
 
 interface ProfitData {
-  trip_summary_aggregate: { aggregate: { sum: { profit_usd: number | null } | null } };
+  trip_summary_aggregate: { aggregate: { sum: { profit_usd: number | null; profit_crc: number | null } | null } };
 }
 
 const PROFIT_QUERY = `query RecentProfit($ids: [uuid!]!) {
-  trip_summary_aggregate(where: { trip_id: { _in: $ids } }) { aggregate { sum { profit_usd } } }
+  trip_summary_aggregate(where: { trip_id: { _in: $ids } }) { aggregate { sum { profit_usd profit_crc } } }
 }`;
 
-function Figure({ label, value, color }: { label: string; value: number; color?: string }) {
-  return (
-    <Card variant="outlined" sx={{ flex: '1 1 150px' }}>
-      <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="h6" component="p" sx={{ fontWeight: 700, color }}>
-          {money(value)}
-        </Typography>
-      </CardContent>
-    </Card>
-  );
+function Figure(props: { label: string; usd: number; crc: number; color?: string }) {
+  return <ReportFigure {...props} minWidth={150} />;
 }
 
 export default function HomePage() {
@@ -86,8 +92,9 @@ export default function HomePage() {
     </>
   );
 
-  const saldo = data?.customer_summary_aggregate.aggregate.sum?.balance_usd ?? 0;
-  const recentProfit = ids.length === 0 ? 0 : (profit.data?.trip_summary_aggregate.aggregate.sum?.profit_usd ?? 0);
+  const saldo = data?.customer_summary_aggregate.aggregate.sum;
+  const recent = ids.length === 0 ? null : profit.data?.trip_summary_aggregate.aggregate.sum;
+  const recentProfit = { usd: recent?.profit_usd ?? 0, crc: recent?.profit_crc ?? 0 };
   const noTrip = data?.no_trip_summary[0];
   const business = data?.business_summary[0];
 
@@ -100,19 +107,24 @@ export default function HomePage() {
             Utilidad global
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Todos los Viajes más lo {NO_TRIP_LABEL}, en USD (Gastos personales incluidos).
+            Todos los Viajes más lo {NO_TRIP_LABEL}, en $ y ₡ (Gastos personales incluidos).
           </Typography>
           <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
-            <Figure label={`Ingreso (${business.order_count} Pedidos)`} value={business.income_usd} />
-            <Figure label="Gastos" value={business.expenses_usd} />
-            <Figure label="Gastos personales" value={business.personal_expenses_usd} />
-            <Figure label="Utilidad" value={business.profit_usd} color={profitColor(business.profit_usd)} />
+            <Figure label={`Ingreso (${business.order_count} Pedidos)`} usd={business.income_usd} crc={business.income_crc} />
+            <Figure label="Gastos" usd={business.expenses_usd} crc={business.expenses_crc} />
+            <Figure label="Gastos personales" usd={business.personal_expenses_usd} crc={business.personal_expenses_crc} />
+            <Figure label="Utilidad" usd={business.profit_usd} crc={business.profit_crc} color={profitColor(business.profit_usd)} />
           </Stack>
         </>
       )}
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
-        <Figure label="Saldo total por cobrar" value={saldo} />
-        <Figure label={`Utilidad de los últimos ${RECENT_TRIPS} Viajes`} value={recentProfit} color={profitColor(recentProfit)} />
+        <Figure label="Saldo total por cobrar" usd={saldo?.balance_usd ?? 0} crc={saldo?.balance_crc ?? 0} />
+        <Figure
+          label={`Utilidad de los últimos ${RECENT_TRIPS} Viajes`}
+          usd={recentProfit.usd}
+          crc={recentProfit.crc}
+          color={profitColor(recentProfit.usd)}
+        />
       </Stack>
 
       <Typography variant="h6" component="h2" sx={{ mb: 1 }}>
@@ -128,12 +140,17 @@ export default function HomePage() {
             <Card key={t.id} variant="outlined">
               <CardActionArea component={Link} href={`/viajes/detalle/?id=${t.id}`}>
                 <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-                  <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <Typography sx={{ fontWeight: 600 }}>{t.name}</Typography>
+                  <Stack direction="row" spacing={2} sx={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <Typography sx={{ fontWeight: 600, minWidth: 0, overflowWrap: 'anywhere' }}>{t.name}</Typography>
                     {t.summary && (
-                      <Typography sx={{ fontWeight: 700, color: profitColor(t.summary.profit_usd) }}>
-                        {money(t.summary.profit_usd)}
-                      </Typography>
+                      <DualAmount
+                        usd={t.summary.profit_usd}
+                        crc={t.summary.profit_crc}
+                        fontWeight={700}
+                        color={profitColor(t.summary.profit_usd)}
+                        align="right"
+                        sx={{ flexShrink: 0 }}
+                      />
                     )}
                   </Stack>
                   <Typography variant="body2" color="text.secondary">
@@ -152,12 +169,12 @@ export default function HomePage() {
             {NO_TRIP_LABEL} (sin Viaje)
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            Pedidos y Gastos que no pertenecen a ningún Viaje, en USD.
+            Pedidos y Gastos que no pertenecen a ningún Viaje, en $ y ₡.
           </Typography>
           <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap' }}>
-            <Figure label={`Ingreso (${noTrip.order_count} Pedidos)`} value={noTrip.income_usd} />
-            <Figure label="Gastos" value={noTrip.expenses_usd} />
-            <Figure label="Saldo" value={noTrip.pending_usd} />
+            <Figure label={`Ingreso (${noTrip.order_count} Pedidos)`} usd={noTrip.income_usd} crc={noTrip.income_crc} />
+            <Figure label="Gastos" usd={noTrip.expenses_usd} crc={noTrip.expenses_crc} />
+            <Figure label="Saldo" usd={noTrip.pending_usd} crc={noTrip.pending_crc} />
           </Stack>
         </>
       )}

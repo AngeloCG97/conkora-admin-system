@@ -1,0 +1,17 @@
+# View (read-only): line amount (price × quantity) of each Artículo in the Pedido's currency, USD and CRC.
+table:
+  name: order_item_summary
+  schema: public
+object_relationships:
+  - name: order_item
+    using:
+      manual_configuration:
+        remote_table: { name: order_item, schema: public }
+        column_mapping: { order_item_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [order_item_id, order_id, currency_code, line_total, line_total_usd, line_total_crc]
+      filter: {}
+      allow_aggregations: true

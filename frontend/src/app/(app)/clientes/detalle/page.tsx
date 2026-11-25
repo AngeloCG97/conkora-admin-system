@@ -20,7 +20,7 @@ import { PageHeader } from '@/components/layout/PageHeader';
 import { GraphQLRequestError, gqlRequest } from '@/lib/graphql';
 import { ORDER_ROW_FIELDS, OrderCard, type OrderRow } from '../../pedidos/OrderCard';
 import { ORDER_OPTIONS_QUERY, OrderDialog, type OrderOptions } from '../../pedidos/OrderDialog';
-import { AccountFigures, type AccountSummary } from '../AccountFigures';
+import { ACCOUNT_SUMMARY_FIELDS, AccountFigures, type AccountSummary } from '../AccountFigures';
 import { CUSTOMER_FIELDS, CustomerDialog, type Customer } from '../CustomerDialog';
 import { NO_TRIP_LABEL } from '@/lib/terms';
 
@@ -34,11 +34,11 @@ const CUSTOMER_ORDERS_QUERY = `query CustomerOrders($id: uuid!) {
 
 const CUSTOMER_ACCOUNT_QUERY = `query CustomerAccount($id: uuid!) {
   customer_by_pk(id: $id) {
-    summary { order_count total_usd paid_usd balance_usd }
+    summary { ${ACCOUNT_SUMMARY_FIELDS} }
     trip_summaries(order_by: [{ trip: { start_date: desc_nulls_last } }]) {
       trip_id
       trip { name }
-      order_count total_usd paid_usd balance_usd
+      ${ACCOUNT_SUMMARY_FIELDS}
     }
   }
 }`;
@@ -151,7 +151,7 @@ function CustomerDetail({ id }: { id: string }) {
       </Card>
 
       <Typography variant="h6" component="h2" sx={{ mt: 3, mb: 1.5 }}>
-        Cuenta (USD)
+        Cuenta ($ y ₡)
       </Typography>
       <Card variant="outlined">
         <CardContent>

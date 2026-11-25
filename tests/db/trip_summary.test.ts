@@ -5,7 +5,7 @@ import {
 } from '../helpers/fixtures.ts';
 
 const summary = async (db: Parameters<Parameters<typeof withRollback>[0]>[0], tripId: string) =>
-  (await db.query('SELECT * FROM trip_summary WHERE trip_id = $1', [tripId])).rows[0];
+  (await db.query('SELECT trip_id, order_count, income_usd, collected_usd, pending_usd, expenses_usd, profit_usd, personal_expenses_usd, business_expenses_usd FROM trip_summary WHERE trip_id = $1', [tripId])).rows[0];
 
 describe('trip_summary and trip_expense_category_summary', () => {
   it('Viaje sin Pedidos ni Gastos da todo en 0', () => withRollback(async (db) => {
