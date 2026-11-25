@@ -5,7 +5,12 @@ import { config } from '@/lib/config';
 import { brand } from '@/theme/brand';
 import { Providers } from './providers';
 
-const brandFont = Nunito({ subsets: ['latin'], variable: '--font-brand', display: 'swap' });
+const brandFont = Nunito({
+  // latin-ext carries U+20A1 (₡); the plain latin subset does not, so ₡ would fall back to a system font.
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-brand',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'ConKora · Administración',
