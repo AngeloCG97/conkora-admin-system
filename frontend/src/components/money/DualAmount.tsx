@@ -2,12 +2,13 @@ import Box from '@mui/material/Box';
 import type { ElementType } from 'react';
 import type { SxProps, Theme } from '@mui/material/styles';
 import Typography, { type TypographyProps } from '@mui/material/Typography';
-import { USD, formatEquivalents, formatMoney, type MoneyCurrency } from '@/lib/money';
+import { USD, dualAmountLines, type MoneyCurrency } from '@/lib/money';
 
 /**
- * An amount in ₡ and $ (issue #30). The official amount goes first, in its currency; below it, muted, its
- * equivalents: ₡ → $, $ → ₡, other currency → ₡ and $. Without `amount`/`currency` the official amount is the
- * USD one (reports and totals), so it shows $ and then ₡. Display only: every value comes from a SQL view.
+ * An amount in ₡ and $ (issue #30). Colones are ALWAYS the primary (big) figure and dólares the secondary one
+ * (below, muted), whatever currency it was registered in; the registered amount stays the official one and the
+ * other is computed by the SQL views (see `dualAmountLines`). Without `amount`/`currency` the official amount is
+ * the USD one (reports and totals). Display only: every value comes from a SQL view.
  */
 export function DualAmount({
   amount,
@@ -22,30 +23,30 @@ export function DualAmount({
   align,
   sx,
 }: {
-  /** Official amount in `currency` (defaults to `usd`). */
+  /** Registered (official) amount in `currency` (defaults to `usd`). */
   amount?: number;
   currency?: MoneyCurrency;
   usd: number;
   crc: number;
-  /** Text before the official amount, e.g. "Saldo". */
+  /** Text before the primary amount, e.g. "Saldo". */
   label?: string;
   variant?: TypographyProps['variant'];
   component?: ElementType;
   fontWeight?: number;
-  /** Color of the official amount (the equivalents stay muted). */
+  /** Color of the primary amount (the secondary line stays muted). */
   color?: string;
   align?: 'left' | 'right';
   sx?: SxProps<Theme>;
 }) {
-  const official = amount ?? usd;
+  const lines = dualAmountLines(currency, amount ?? usd, { usd, crc });
   return (
     <Box sx={{ textAlign: align, minWidth: 0, ...sx }}>
       <Typography variant={variant} component={component ?? 'p'} sx={{ fontWeight, color }}>
         {label ? `${label} ` : ''}
-        {formatMoney(official, currency)}
+        {lines.primary}
       </Typography>
       <Typography variant="caption" color="text.secondary" component="p" sx={{ lineHeight: 1.3 }}>
-        {formatEquivalents(currency.code, { usd, crc })}
+        {lines.secondary}
       </Typography>
     </Box>
   );

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CRC, USD, equivalentAmounts, formatEquivalents, formatMoney } from './money';
+import { CRC, USD, dualAmountLines, formatMoney } from './money';
 
 describe('formatMoney', () => {
   it('formats USD with comma thousands and two decimals', () => {
@@ -23,24 +23,22 @@ describe('formatMoney', () => {
   });
 });
 
-describe('equivalentAmounts / formatEquivalents (DualAmount)', () => {
+describe('dualAmountLines (DualAmount)', () => {
   const eq = { usd: 50, crc: 26000 };
 
-  it('an amount in ₡ shows its $ equivalent', () => {
-    expect(equivalentAmounts('CRC', eq)).toEqual([{ amount: 50, currency: USD }]);
-    expect(formatEquivalents('CRC', eq)).toBe('≈ $50.00');
+  it('an amount in ₡ shows ₡ primary and its $ equivalent', () => {
+    expect(dualAmountLines(CRC, 26000, eq)).toEqual({ primary: '₡26.000', secondary: '≈ $50.00' });
   });
 
-  it('an amount in $ shows its ₡ equivalent', () => {
-    expect(equivalentAmounts('USD', eq)).toEqual([{ amount: 26000, currency: CRC }]);
-    expect(formatEquivalents('USD', eq)).toBe('≈ ₡26.000');
+  it('an amount in $ still shows ₡ primary and the official $ secondary', () => {
+    expect(dualAmountLines(USD, 50, eq)).toEqual({ primary: '₡26.000', secondary: '$50.00' });
   });
 
-  it('an amount in another currency shows ₡ and $', () => {
-    expect(formatEquivalents('EUR', eq)).toBe('≈ ₡26.000 · $50.00');
+  it('an amount in another currency shows ₡ primary, then its official amount and $', () => {
+    expect(dualAmountLines({ code: 'EUR', symbol: '€' }, 45, eq)).toEqual({ primary: '₡26.000', secondary: '€45.00 · ≈ $50.00' });
   });
 
   it('keeps negative values (e.g. Utilidad, Saldo a favor)', () => {
-    expect(formatEquivalents('USD', { usd: -10, crc: -5200 })).toBe('≈ -₡5.200');
+    expect(dualAmountLines(USD, -10, { usd: -10, crc: -5200 })).toEqual({ primary: '-₡5.200', secondary: '-$10.00' });
   });
 });

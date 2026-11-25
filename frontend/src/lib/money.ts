@@ -33,21 +33,17 @@ export interface Equivalents {
 }
 
 /**
- * Which equivalents to show next to an amount registered in `currencyCode`:
- * ₡ → $, $ → ₡, any other currency → ₡ and $. Display only: the values come from the views.
+ * Lines of a dual amount: ₡ is ALWAYS the primary (prominent) figure and $ the secondary one, whatever
+ * currency the amount was registered in. The registered amount stays the official one: it is shown as-is,
+ * the other figures carry `≈` (computed by the SQL views). Another currency (e.g. EUR) shows its own
+ * official amount and then `≈ $`. Display only: every value comes from the views.
  */
-export function equivalentAmounts(currencyCode: string, { usd, crc }: Equivalents): { amount: number; currency: MoneyCurrency }[] {
-  if (currencyCode === CRC.code) return [{ amount: usd, currency: USD }];
-  if (currencyCode === USD.code) return [{ amount: crc, currency: CRC }];
-  return [
-    { amount: crc, currency: CRC },
-    { amount: usd, currency: USD },
-  ];
-}
-
-/** Muted line shown under an official amount, e.g. `≈ ₡52.000` or `≈ ₡26.000 · $50.00`. */
-export function formatEquivalents(currencyCode: string, equivalents: Equivalents): string {
-  return `≈ ${equivalentAmounts(currencyCode, equivalents)
-    .map((e) => formatMoney(e.amount, e.currency))
-    .join(' · ')}`;
+export function dualAmountLines(
+  currency: MoneyCurrency,
+  official: number,
+  { usd, crc }: Equivalents,
+): { primary: string; secondary: string } {
+  if (currency.code === CRC.code) return { primary: formatMoney(official, CRC), secondary: `≈ ${formatMoney(usd, USD)}` };
+  if (currency.code === USD.code) return { primary: formatMoney(crc, CRC), secondary: formatMoney(official, USD) };
+  return { primary: formatMoney(crc, CRC), secondary: `${formatMoney(official, currency)} · ≈ ${formatMoney(usd, USD)}` };
 }
