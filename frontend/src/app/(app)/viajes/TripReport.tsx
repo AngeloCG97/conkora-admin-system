@@ -115,7 +115,7 @@ export function TripReport({ tripId }: { tripId: string }) {
         Reporte ($ y ₡)
       </Typography>
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 1.5 }}>
-        <Figure label={`Ingreso (${s.order_count} Pedidos)`} usd={s.income_usd} crc={s.income_crc} />
+        <Figure label={`Ingreso (${s.order_count} Ventas)`} usd={s.income_usd} crc={s.income_crc} />
         <Figure label="Gastos" usd={s.expenses_usd} crc={s.expenses_crc} />
         <Figure label="Utilidad" usd={s.profit_usd} crc={s.profit_crc} color={profitColor(s.profit_usd)} />
       </Stack>
@@ -160,7 +160,7 @@ export function TripReport({ tripId }: { tripId: string }) {
       </Typography>
       {report.customer_summaries.length === 0 ? (
         <Typography color="text.secondary" sx={{ mb: 3 }}>
-          Aún no hay Pedidos en este Viaje.
+          Aún no hay Ventas en este Viaje.
         </Typography>
       ) : (
         <Stack spacing={1} sx={{ mb: 3 }}>

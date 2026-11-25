@@ -22,7 +22,7 @@ describe('shareUrl', () => {
 });
 
 describe('shareLink', () => {
-  const data = { title: 'Pedido', text: 'Hola', url: 'https://x/pedido/?t=1' };
+  const data = { title: 'Venta', text: 'Hola', url: 'https://x/pedido/?t=1' };
   const abort = () => Object.assign(new Error('closed'), { name: 'AbortError' });
 
   it('uses the Web Share API when available', async () => {

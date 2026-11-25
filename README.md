@@ -1,6 +1,6 @@
 # ConKora · Sistema administrativo
 
-Sistema privado para llevar Viajes, Gastos, Clientes, Pedidos, Abonos y Utilidades de ConKora.
+Sistema privado para llevar Viajes, Gastos, Clientes, Ventas, Abonos y Utilidades de ConKora.
 Glosario en [`CONTEXT.md`](CONTEXT.md), decisiones en [`docs/adr/`](docs/adr/), convenciones de código en
 [`docs/agents/conventions.md`](docs/agents/conventions.md).
 

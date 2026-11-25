@@ -111,13 +111,13 @@ export function OrderDialog({
       return res.insert_order_one.id;
     },
     onSuccess: (id) => {
-      notify.success(order ? 'Pedido actualizado' : 'Pedido creado');
+      notify.success(order ? 'Venta actualizada' : 'Venta creada');
       qc.invalidateQueries({ queryKey: ['orders'] });
       qc.invalidateQueries({ queryKey: ['order'] });
       onClose();
       if (!order) router.push(`/pedidos/detalle/?id=${id}`);
     },
-    onError: () => notify.error('No se pudo guardar el Pedido'),
+    onError: () => notify.error('No se pudo guardar la Venta'),
   });
 
   const submit = () => {
@@ -127,7 +127,7 @@ export function OrderDialog({
 
   return (
     <Dialog open onClose={onClose} fullScreen={fullScreen} fullWidth maxWidth="sm">
-      <DialogTitle>{order ? 'Editar Pedido' : 'Nuevo Pedido'}</DialogTitle>
+      <DialogTitle>{order ? 'Editar Venta' : 'Nueva Venta'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <TextField

@@ -49,10 +49,10 @@ export default function OrdersPage() {
   return (
     <>
       <PageHeader
-        title="Pedidos"
+        title="Ventas"
         actions={
           <Button variant="contained" startIcon={<AddIcon />} onClick={() => setCreating(true)} disabled={!options.data}>
-            Nuevo Pedido
+            Nueva Venta
           </Button>
         }
       />
@@ -109,7 +109,7 @@ export default function OrdersPage() {
       {orders.isPending ? (
         <Loading />
       ) : orders.data?.order.length === 0 ? (
-        <Typography color="text.secondary">No hay Pedidos con estos filtros.</Typography>
+        <Typography color="text.secondary">No hay Ventas con estos filtros.</Typography>
       ) : (
         <Stack spacing={1.5}>
           {orders.data?.order.map((o) => (

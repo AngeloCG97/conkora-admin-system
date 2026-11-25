@@ -70,7 +70,7 @@ Both `npm run check` and `npm test` must pass before opening a PR.
 
 - DB/GraphQL/code identifiers in English, singular snake_case tables as in the PRD schema
   (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`).
-- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Pedido, Artículo, Abono, Saldo…):
+- UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Venta, Artículo, Abono, Saldo…):
   `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/reportes/`, `/monedas/`.
 
 ## Adding a table (migration + metadata + permissions)

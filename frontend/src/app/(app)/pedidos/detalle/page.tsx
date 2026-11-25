@@ -115,7 +115,7 @@ function OrderDetailView({ id }: { id: string }) {
   const remove = useMutation({
     mutationFn: () => gqlRequest(DELETE_ORDER, { id }),
     onSuccess: () => {
-      notify.success('Pedido eliminado');
+      notify.success('Venta eliminada');
       qc.removeQueries({ queryKey: ['order', id] });
       qc.removeQueries({ queryKey: ['order-share', id] });
       qc.invalidateQueries({ queryKey: ['orders'] });
@@ -127,7 +127,7 @@ function OrderDetailView({ id }: { id: string }) {
   const onDelete = async () => {
     if (
       await confirm({
-        title: '¿Eliminar el Pedido?',
+        title: '¿Eliminar la Venta?',
         message: 'También se eliminarán sus Artículos y Abonos. Esta acción no se puede deshacer.',
         confirmText: 'Eliminar',
         danger: true,
@@ -142,9 +142,9 @@ function OrderDetailView({ id }: { id: string }) {
   if (!order) {
     return (
       <>
-        <PageHeader title="Pedido no encontrado" />
+        <PageHeader title="Venta no encontrada" />
         <Button component={Link} href="/pedidos/" startIcon={<ArrowBackIcon />}>
-          Volver a Pedidos
+          Volver a Ventas
         </Button>
       </>
     );
@@ -155,20 +155,20 @@ function OrderDetailView({ id }: { id: string }) {
   return (
     <>
       <PageHeader
-        title={`Pedido de ${order.customer.name}`}
+        title={`Venta de ${order.customer.name}`}
         actions={
           <Stack direction="row" spacing={1}>
-            <IconButton aria-label="Editar Pedido" onClick={() => setEditing(true)} disabled={!options.data}>
+            <IconButton aria-label="Editar Venta" onClick={() => setEditing(true)} disabled={!options.data}>
               <EditIcon />
             </IconButton>
-            <IconButton aria-label="Eliminar Pedido" color="error" onClick={onDelete} disabled={remove.isPending}>
+            <IconButton aria-label="Eliminar Venta" color="error" onClick={onDelete} disabled={remove.isPending}>
               <DeleteIcon />
             </IconButton>
           </Stack>
         }
       />
       <Button component={Link} href="/pedidos/" startIcon={<ArrowBackIcon />} sx={{ mb: 2, mt: -2 }}>
-        Pedidos
+        Ventas
       </Button>
 
       <Card variant="outlined" sx={{ mb: 3 }}>
@@ -228,7 +228,7 @@ function OrderDetailView({ id }: { id: string }) {
           </Stack>
           {order.status === 'cancelled' && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              Pedido cancelado: no cuenta en los Totales de reportes.
+              Venta cancelada: no cuenta en los Totales de reportes.
             </Typography>
           )}
         </CardContent>
@@ -245,7 +245,7 @@ function OrderDetailView({ id }: { id: string }) {
         </Button>
       </Stack>
       {order.items.length === 0 ? (
-        <Typography color="text.secondary">Este Pedido todavía no tiene Artículos.</Typography>
+        <Typography color="text.secondary">Esta Venta todavía no tiene Artículos.</Typography>
       ) : (
         <Stack spacing={1.5}>
           {order.items.map((item) => (
@@ -284,7 +284,7 @@ function OrderDetailView({ id }: { id: string }) {
         </Button>
       </Stack>
       {order.payments.length === 0 ? (
-        <Typography color="text.secondary">Este Pedido todavía no tiene Abonos.</Typography>
+        <Typography color="text.secondary">Esta Venta todavía no tiene Abonos.</Typography>
       ) : (
         <Stack spacing={1.5}>
           {order.payments.map((payment) => (
@@ -342,7 +342,7 @@ function OrderDetailView({ id }: { id: string }) {
 
 function OrderDetailRoute() {
   const id = useSearchParams().get('id');
-  if (!id) return <PageHeader title="Pedido no encontrado" />;
+  if (!id) return <PageHeader title="Venta no encontrada" />;
   return <OrderDetailView id={id} />;
 }
 

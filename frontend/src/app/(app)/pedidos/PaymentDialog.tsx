@@ -142,7 +142,7 @@ export function PaymentDialog({
           </Stack>
           {currencyCode !== orderCurrencyCode && (
             <Typography variant="body2" color="text.secondary">
-              Se convierte a {orderCurrencyCode} con el tipo de cambio del Viaje del Pedido (o el global si es {NO_TRIP_LABEL}).
+              Se convierte a {orderCurrencyCode} con el tipo de cambio del Viaje de la Venta (o el global si es {NO_TRIP_LABEL}).
             </Typography>
           )}
           <TextField
