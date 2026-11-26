@@ -126,3 +126,36 @@ export async function insertRequestItem(
   );
   return item.id;
 }
+
+/** Inserts an Artículo de inventario (unit sale price in `currency`). `tripId` null/omitted = General. */
+export async function insertStockItem(
+  db: pg.PoolClient,
+  {
+    tripId = null as string | null,
+    name = 'Artículo de inventario',
+    price = 10000,
+    currency = 'CRC',
+    quantity = 1,
+    gender = 'unisex',
+    size = null as string | null,
+    description = null as string | null,
+    photoUrl = null as string | null,
+  }: {
+    tripId?: string | null;
+    name?: string;
+    price?: number;
+    currency?: string;
+    quantity?: number;
+    gender?: string;
+    size?: string | null;
+    description?: string | null;
+    photoUrl?: string | null;
+  } = {},
+) {
+  const { rows: [item] } = await db.query<{ id: string }>(
+    `INSERT INTO stock_item (trip_id, name, price, currency_code, quantity, gender, size, description, photo_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+    [tripId, name, price, currency, quantity, gender, size, description, photoUrl],
+  );
+  return item.id;
+}

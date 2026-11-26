@@ -69,10 +69,10 @@ Both `npm run check` and `npm test` must pass before opening a PR.
 ## Naming
 
 - DB/GraphQL/code identifiers in English, singular snake_case tables as in the PRD schema
-  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`, `customer_request`, `customer_request_item`).
-  Code names don't follow the UI renames: `order` = Venta, `customer_request` = Pedido (see `CONTEXT.md`).
+  (`trip`, `trip_rate`, `expense`, `customer`, `order`, `order_item`, `payment`, `customer_request`, `customer_request_item`, `stock_item`).
+  Code names don't follow the UI renames: `order` = Venta, `customer_request` = Pedido, `stock_item` = Artículo de inventario (see `CONTEXT.md`).
 - UI text and routes in Spanish using `CONTEXT.md` terms (Viaje, Gasto, Pedido, Venta, Artículo, Abono, Saldo…):
-  `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/ventas/`, `/reportes/`, `/monedas/`.
+  `/viajes/`, `/gastos/`, `/clientes/`, `/pedidos/`, `/ventas/`, `/inventario/`, `/reportes/`, `/monedas/`.
 
 ## Adding a table (migration + metadata + permissions)
 
@@ -82,7 +82,7 @@ Both `npm run check` and `npm test` must pass before opening a PR.
    `numeric(14,2)` with CHECKs from the PRD (`>= 0`, `> 0`); exchange rates `numeric(18,6)`;
    `created_at timestamptz NOT NULL DEFAULT now()`; FKs `ON DELETE RESTRICT` (Viaje, Cliente) or
    `CASCADE` (Venta → Artículos/Abonos) as in the PRD. Reference tables (`expense_category`,
-   `order_status`) are Hasura enum tables: `value text PRIMARY KEY, comment text`, seeded in the
+   `order_status`, `item_gender`) are Hasura enum tables: `value text PRIMARY KEY, comment text`, seeded in the
    migration, `is_enum: true` in metadata.
 2. Add `hasura/metadata/databases/default/tables/public_<table>.yaml` and include it in `tables.yaml`
    (keep alphabetical). Business entity with full CRUD for `manager`:
@@ -189,7 +189,8 @@ Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEF
    `unexpected` / "database query error" and the message is lost for `manager`.
 4. Concurrency: lock what you read (`SELECT ... FOR UPDATE`) and, when the function may *create* a row others could also
    create, take `pg_advisory_xact_lock(hashtextextended('<function>:<key>', 0))` before looking for it (READ COMMITTED: the
-   next statement sees what the lock holder committed).
+   next statement sees what the lock holder committed). Functions that may create the **same** row must share the key:
+   `sell_stock_item` uses `move_request_item_to_order:<customer>:<trip|general>` too, so a sale and a move never create two Ventas.
 5. Relationships selected on the returned rows are read in the same statement snapshot, so they do **not** see rows the
    function inserted: return the id and refetch (invalidate the query keys).
 6. Tests: `tests/db/<name>.test.ts` (logic, `withRollback`; concurrency with two `pg.Client`s on committed rows cleaned up in
@@ -298,6 +299,21 @@ Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEF
   and notifies with a link (`notify.success(message, { label, href })`). Target rule: most recent (`date`, then `created_at`)
   Pendiente Venta of the same Cliente and `trip_id IS NOT DISTINCT FROM` the Pedido's; none → new Pendiente Venta in CRC.
   The Artículo is copied with quantity 1 (name, size, description, photo_url) and deleted from the Pedido.
+- Inventario (`inventario/`, table `stock_item` + enum `item_gender` (`men`/Hombre, `women`/Mujer, `unisex`), migration
+  `create_stock_item`): Artículos de inventario with unit sale `price` in its own `currency_code` (default CRC), `quantity >= 0`
+  (0 = Agotado, kept as history), optional `trip_id` (where it was bought; its rates convert it). One list page, create/edit/delete
+  in `StockItemDialog` (reuses `PhotoPicker`; options from `['order-options']` + `['item-genders']`), filters via `stockWhere`
+  (Disponibles by default / Agotados / Todos, género, name `_ilike`). Views: `stock_item_summary` (`stock_item.summary`: `price_usd`,
+  `price_crc`, `stock_value[_usd|_crc]` = price × quantity, rounded per row), `stock_summary` (one row: `item_count`, `unit_count`,
+  `stock_value_usd`, `stock_value_crc` of `quantity > 0`, summing the rounded rows) and `projected_profit_summary` (one row:
+  `business_summary.profit_*` + `stock_summary.stock_value_*` = `projected_profit_usd/crc`). Valued at **sale price** (there is no
+  cost field: cost is a Gasto). "Vender" = `SellDialog` → SQL function `sell_stock_item(item_id, customer_id, quantity, price, today)`
+  (same target rule as `move_request_item_to_order`, row lock `FOR UPDATE` on the Artículo so stock never goes negative, messages via
+  22023: agotado / "Solo quedan N en inventario" / unknown Artículo or Cliente / bad quantity or price). The dialog previews the target
+  with `moveTargetWhere(customer, item.trip_id)` and prefills the price only when the target Venta's currency equals the Artículo's
+  (`initialSalePrice`; never converts). Keys: list/header `['stock-items', ...]`; every inventario mutation calls `invalidateStock`
+  (= `['stock-items']` + `['orders', 'dashboard']`); a sale also invalidates `['orders']` and `['order']` and notifies with "Ver Venta".
+  Fixture: `insertStockItem`.
 - Reporte por Viaje (`viajes/TripReport.tsx`): SQL views `trip_summary` (one row per Viaje, 0s when empty; `income_usd`, `collected_usd`,
   `pending_usd`, `expenses_usd`, `profit_usd`, `order_count`, `personal_expenses_usd`, `business_expenses_usd`) and `trip_expense_category_summary`, exposed as `trip.summary` /
   `trip.expense_categories`; Clientes of the Viaje via `trip.customer_summaries`. Report queries use keys under `['orders', ...]`;
@@ -307,6 +323,7 @@ Example: `move_request_item_to_order(item_id uuid, price numeric, today date DEF
   the last 5 Viajes with Utilidad (`trip_summary_aggregate` for the card) and the General Ingreso/Gastos/Saldo.
   Utilidad global: view `business_summary` (one row, 0s when empty; same money columns as `trip_summary` minus `trip_id`) defined as
   Σ (`trip_summary` UNION ALL `no_trip_summary`), so it always equals the sum of the reports; shown at the top of Inicio.
+  Below it, the Utilidad proyectada card (`projected_profit_summary`, breakdown line from `projectedProfitBreakdown`) links to `/inventario/`.
   The label for "no Viaje" is `NO_TRIP_LABEL` = "General" in `lib/terms.ts`: always use it, never hard-code it. "Personal" in the UI
   only ever means Gasto personal.
 - Fotos de Artículos (issue #13): `order_item.photo_url` stores only Cloudinary's `secure_url`. Hapi `POST /uploads/signature`
