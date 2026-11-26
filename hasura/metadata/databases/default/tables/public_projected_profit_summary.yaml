@@ -1,0 +1,10 @@
+# View (read-only): one row with the Utilidad proyectada = Utilidad global (business_summary) + Inventario disponible (stock_summary), USD and CRC.
+table:
+  name: projected_profit_summary
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [profit_usd, stock_value_usd, projected_profit_usd, profit_crc, stock_value_crc, projected_profit_crc]
+      filter: {}
+      allow_aggregations: true

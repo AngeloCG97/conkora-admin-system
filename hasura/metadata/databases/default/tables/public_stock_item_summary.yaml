@@ -1,0 +1,17 @@
+# View (read-only): unit price and stock value (price × quantity) of each Artículo de inventario in its currency, USD and CRC.
+table:
+  name: stock_item_summary
+  schema: public
+object_relationships:
+  - name: stock_item
+    using:
+      manual_configuration:
+        remote_table: { name: stock_item, schema: public }
+        column_mapping: { stock_item_id: id }
+        insertion_order: null
+select_permissions:
+  - role: manager
+    permission:
+      columns: [stock_item_id, trip_id, gender, currency_code, quantity, rate, price_usd, price_crc, stock_value, stock_value_usd, stock_value_crc]
+      filter: {}
+      allow_aggregations: true

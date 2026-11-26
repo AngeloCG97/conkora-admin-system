@@ -171,7 +171,7 @@ function TripDetail({ id }: { id: string }) {
     onError: (e) =>
       notify.error(
         e instanceof GraphQLRequestError && e.code === 'constraint-violation'
-          ? 'No se puede eliminar: el Viaje tiene Gastos, Ventas o Pedidos'
+          ? 'No se puede eliminar: el Viaje tiene Gastos, Ventas, Pedidos o inventario'
           : 'No se pudo eliminar',
       ),
   });

@@ -6,3 +6,7 @@
   configuration: { exposed_as: mutation }
   permissions:
     - role: manager
+- function: { name: sell_stock_item, schema: public }
+  configuration: { exposed_as: mutation }
+  permissions:
+    - role: manager

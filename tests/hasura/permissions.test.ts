@@ -832,3 +832,131 @@ describe('customer_request, customer_request_item and move_request_item_to_order
     expect(errorCode(result)).toBe('invalid-headers');
   });
 });
+
+describe('stock_item, item_gender, stock views and sell_stock_item (Inventario)', () => {
+  const NAME = 'Cliente de prueba Inventario';
+  const ITEM = 'Artículo de prueba Inventario';
+  const SELL = `mutation ($item: uuid!, $customer: uuid!, $quantity: Int!, $price: numeric!) {
+    sell_stock_item(args: { item_id: $item, customer_id: $customer, quantity: $quantity, price: $price, today: "2026-03-01" }) {
+      id currency_code status trip_id
+    }
+  }`;
+  const NO_ID = '00000000-0000-0000-0000-000000000000';
+
+  afterAll(async () => {
+    await asAdmin(`mutation {
+      delete_order(where: { customer: { name: { _eq: "${NAME}" } } }) { affected_rows }
+      delete_stock_item(where: { name: { _eq: "${ITEM}" } }) { affected_rows }
+      delete_customer(where: { name: { _eq: "${NAME}" } }) { affected_rows }
+    }`);
+  });
+
+  it('manager does CRUD on Artículos de inventario and reads their summary', async () => {
+    const ins = await asManager<{ insert_stock_item_one: { id: string } }>(
+      `mutation { insert_stock_item_one(object: {
+        name: "${ITEM}", size: "M", gender: women, description: "Roja", price: 15000, quantity: 2
+      }) { id currency_code quantity summary { stock_value stock_value_crc price_crc } } }`,
+    );
+    expect(ins.errors).toBeUndefined();
+    expect(ins.data!.insert_stock_item_one).toMatchObject({
+      currency_code: 'CRC',
+      quantity: 2,
+      summary: { stock_value: 30000, stock_value_crc: 30000, price_crc: 15000 },
+    });
+    const id = ins.data!.insert_stock_item_one.id;
+
+    const upd = await asManager(
+      `mutation { update_stock_item_by_pk(pk_columns: { id: "${id}" }, _set: { quantity: 0, gender: unisex }) { quantity gender } }`,
+    );
+    expect(upd.data).toEqual({ update_stock_item_by_pk: { quantity: 0, gender: 'unisex' } });
+
+    const sel = await asManager<{ item_gender: unknown[]; stock_item: unknown[] }>(
+      `{ item_gender { value comment }
+         stock_item(where: { id: { _eq: "${id}" } }) { name trip { name } currency { symbol } } }`,
+    );
+    expect(sel.errors).toBeUndefined();
+    expect(sel.data!.item_gender).toEqual([
+      { value: 'men', comment: 'Hombre' },
+      { value: 'women', comment: 'Mujer' },
+      { value: 'unisex', comment: 'Unisex' },
+    ]);
+    expect(sel.data!.stock_item).toEqual([{ name: ITEM, trip: null, currency: { symbol: '₡' } }]);
+
+    const del = await asManager(`mutation { delete_stock_item_by_pk(id: "${id}") { id } }`);
+    expect(del.errors).toBeUndefined();
+  });
+
+  it('rejects a negative quantity', async () => {
+    const result = await asManager(
+      `mutation { insert_stock_item_one(object: { name: "${ITEM}", gender: men, price: 1, quantity: -1 }) { id } }`,
+    );
+    expect(result.errors?.[0]?.message).toMatch(/Check constraint violation|stock_item_quantity_check/);
+  });
+
+  it('manager reads stock_summary and projected_profit_summary (one row each)', async () => {
+    const read = await asManager<{ stock_summary: unknown[]; projected_profit_summary: unknown[] }>(
+      `{ stock_summary { item_count unit_count stock_value_usd stock_value_crc }
+         projected_profit_summary { profit_usd stock_value_usd projected_profit_usd profit_crc stock_value_crc projected_profit_crc } }`,
+    );
+    expect(read.errors).toBeUndefined();
+    expect(read.data!.stock_summary).toHaveLength(1);
+    expect(read.data!.projected_profit_summary).toHaveLength(1);
+  });
+
+  it('views and the enum table are read-only; sell_stock_item is a mutation', async () => {
+    const mutations = await rootFieldNames(await signTestJwt(), 'mutationType');
+    expect(mutations.filter((m) => /stock_item_summary|stock_summary|projected_profit_summary|item_gender/.test(m))).toEqual([]);
+    expect(mutations).toEqual(expect.arrayContaining(['sell_stock_item', 'insert_stock_item_one']));
+  });
+
+  it('manager sells into a new CRC Venta and the stock goes down', async () => {
+    const ins = await asManager<{ insert_stock_item_one: { id: string }; insert_customer_one: { id: string } }>(
+      `mutation {
+        insert_stock_item_one(object: { name: "${ITEM}", gender: men, size: "L", price: 25000, quantity: 3 }) { id }
+        insert_customer_one(object: { name: "${NAME}" }) { id }
+      }`,
+    );
+    expect(ins.errors).toBeUndefined();
+    const item = ins.data!.insert_stock_item_one.id;
+    const customer = ins.data!.insert_customer_one.id;
+
+    const sold = await asManager<{ sell_stock_item: { id: string }[] }>(SELL, { item, customer, quantity: 2, price: 24000 });
+    expect(sold.errors).toBeUndefined();
+    expect(sold.data!.sell_stock_item).toEqual([
+      expect.objectContaining({ currency_code: 'CRC', status: 'pending', trip_id: null }),
+    ]);
+    const orderId = sold.data!.sell_stock_item[0]!.id;
+    const after = await asManager(
+      `{ order_by_pk(id: "${orderId}") { items { name price quantity size } }
+         stock_item_by_pk(id: "${item}") { quantity } }`,
+    );
+    expect(after.data).toEqual({
+      order_by_pk: { items: [{ name: ITEM, price: 24000, quantity: 2, size: 'L' }] },
+      stock_item_by_pk: { quantity: 1 },
+    });
+
+    // More than the stock: a clear, user-facing error (SQLSTATE 22023 → data-exception keeps the message).
+    const tooMany = await asManager(SELL, { item, customer, quantity: 2, price: 1 });
+    expect(errorCode(tooMany)).toBe('data-exception');
+    expect(tooMany.errors?.[0]?.message).toBe('Solo queda 1 en inventario');
+  });
+
+  it('rejects a sale without a JWT', async () => {
+    const result = await graphql(SELL, {
+      auth: { none: true },
+      variables: { item: NO_ID, customer: NO_ID, quantity: 1, price: 1 },
+    });
+    expect(result.data).toBeUndefined();
+    expect(errorCode(result)).toBe('invalid-headers');
+  });
+
+  it('a role other than manager (e.g. anonymous) sees none of it', async () => {
+    const token = await signTestJwt({ role: 'anonymous' });
+    const read = await graphql(`{ stock_item { id } projected_profit_summary { projected_profit_usd } }`, { auth: { token } });
+    expect(read.data).toBeUndefined();
+    expect(errorCode(read)).toBe('validation-failed');
+    const sell = await graphql(SELL, { auth: { token }, variables: { item: NO_ID, customer: NO_ID, quantity: 1, price: 1 } });
+    expect(sell.data).toBeUndefined();
+    expect(errorCode(sell)).toBe('validation-failed');
+  });
+});

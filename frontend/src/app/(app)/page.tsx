@@ -13,6 +13,7 @@ import { formatDateRange } from '@/lib/dates';
 import { gqlRequest } from '@/lib/graphql';
 import { NO_TRIP_LABEL } from '@/lib/terms';
 import { DualAmount } from '@/components/money/DualAmount';
+import { projectedProfitBreakdown } from './inventario/inventory';
 import { Figure as ReportFigure, profitColor, type TripSummary } from './viajes/TripReport';
 
 const RECENT_TRIPS = 5;
@@ -45,6 +46,14 @@ interface DashboardData {
     | 'personal_expenses_crc'
     | 'profit_crc'
   >[];
+  projected_profit_summary: {
+    profit_usd: number;
+    profit_crc: number;
+    stock_value_usd: number;
+    stock_value_crc: number;
+    projected_profit_usd: number;
+    projected_profit_crc: number;
+  }[];
 }
 
 // Everything (Utilidad global, Saldo, recent Viajes, General summary) comes from SQL views; the frontend only displays.
@@ -57,6 +66,9 @@ const DASHBOARD_QUERY = `query Dashboard {
   no_trip_summary { order_count income_usd expenses_usd pending_usd income_crc expenses_crc pending_crc }
   business_summary {
     order_count income_usd expenses_usd personal_expenses_usd profit_usd income_crc expenses_crc personal_expenses_crc profit_crc
+  }
+  projected_profit_summary {
+    profit_usd profit_crc stock_value_usd stock_value_crc projected_profit_usd projected_profit_crc
   }
 }`;
 
@@ -73,7 +85,8 @@ function Figure(props: { label: string; usd: number; crc: number; color?: string
 }
 
 export default function HomePage() {
-  // Keys under ['orders', ...] so Abono/Venta/Gasto changes refresh the figures (see conventions).
+  // Keys under ['orders', ...] so Abono/Venta/Gasto changes refresh the figures (see conventions); inventario
+  // changes invalidate ['orders', 'dashboard'] too (Utilidad proyectada).
   const { data, isPending } = useQuery({
     queryKey: ['orders', 'dashboard'],
     queryFn: () => gqlRequest<DashboardData>(DASHBOARD_QUERY),
@@ -97,6 +110,7 @@ export default function HomePage() {
   const recentProfit = { usd: recent?.profit_usd ?? 0, crc: recent?.profit_crc ?? 0 };
   const noTrip = data?.no_trip_summary[0];
   const business = data?.business_summary[0];
+  const projected = data?.projected_profit_summary[0];
 
   return (
     <>
@@ -116,6 +130,27 @@ export default function HomePage() {
             <Figure label="Utilidad" usd={business.profit_usd} crc={business.profit_crc} color={profitColor(business.profit_usd)} />
           </Stack>
         </>
+      )}
+      {projected && (
+        <Card variant="outlined" sx={{ mb: 3 }}>
+          <CardActionArea component={Link} href="/inventario/">
+            <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+              <Typography variant="body2" color="text.secondary">
+                Utilidad proyectada (vendiendo todo el inventario a su precio)
+              </Typography>
+              <DualAmount
+                usd={projected.projected_profit_usd}
+                crc={projected.projected_profit_crc}
+                variant="h6"
+                fontWeight={700}
+                color={profitColor(projected.projected_profit_usd)}
+              />
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, overflowWrap: 'anywhere' }}>
+                {projectedProfitBreakdown(projected)}
+              </Typography>
+            </CardContent>
+          </CardActionArea>
+        </Card>
       )}
       <Stack direction="row" useFlexGap spacing={1.5} sx={{ flexWrap: 'wrap', mb: 3 }}>
         <Figure label="Saldo total por cobrar" usd={saldo?.balance_usd ?? 0} crc={saldo?.balance_crc ?? 0} />

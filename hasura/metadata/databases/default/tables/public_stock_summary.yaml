@@ -1,0 +1,10 @@
+# View (read-only): one row with the Inventario disponible (quantity > 0) valued at sale price, in USD and CRC (0s when empty).
+table:
+  name: stock_summary
+  schema: public
+select_permissions:
+  - role: manager
+    permission:
+      columns: [item_count, unit_count, stock_value_usd, stock_value_crc]
+      filter: {}
+      allow_aggregations: true
