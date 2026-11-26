@@ -160,7 +160,7 @@ export function StockItemDialog({
             helperText={touched && errors.name ? 'Requerido' : undefined}
             autoFocus
           />
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField label="Talla (opcional)" value={size} onChange={(e) => setSize(e.target.value)} sx={{ flex: 1 }} />
             <TextField
               select
@@ -178,7 +178,7 @@ export function StockItemDialog({
               ))}
             </TextField>
           </Stack>
-          <Stack direction="row" spacing={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField
               label="Precio de venta"
               value={price}
@@ -193,7 +193,7 @@ export function StockItemDialog({
               label="Moneda"
               value={currencyCode}
               onChange={(e) => setCurrencyCode(e.target.value)}
-              sx={{ minWidth: 110 }}
+              sx={{ minWidth: { sm: 110 } }}
             >
               {options.currency.map((c) => (
                 <MenuItem key={c.code} value={c.code}>
